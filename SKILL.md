@@ -1,0 +1,331 @@
+---
+name: research-log
+description: Markdown record kept beside a project's code: hypotheses, experiments, findings, protocols and decisions with stable identifiers. Use when a research or analysis project is being set up, started, or given a research log, in whatever words the user reaches for; whenever a project records what was measured, what it means, how a procedure is run, or why a choice was frozen; when the user asks where a result, a claim, a literature review or a runbook should go; or when the project contains docs/{hypotheses,experiments,findings,protocols,decisions}/ with frontmatter'd markdown. Independent of any task tracker.
+---
+
+# Research log
+
+A project's work lives in a task tracker. What the work established lives here,
+written so that it can later leave the project. This skill requires no
+particular tracker and works the same with task-tracker, Jira, GitHub issues or
+nothing at all.
+
+```
+AGENTS.md                     # index, ~30 lines, points at everything else
+docs/
+├── .research-log.md     # board settings (committed)
+├── conventions.md            # shipped by this skill. Machine-owned, never hand-edited
+├── conventions-local.md      # this project's additions. Never touched by the skill
+├── vision.md                 # why this project exists
+├── hypotheses/
+│   ├── H-NNNN.xxx-slug.md
+│   └── _index.md             # generated
+├── experiments/
+│   └── E-NNNN.xxx-slug.md
+├── findings/
+│   └── <OPAQUE-ID>-slug.md
+├── protocols/
+│   ├── P-NNNN.xxx-slug.md
+│   └── _index.md             # generated
+└── decisions/
+    ├── D-NNNN.xxx-slug.md
+    └── _index.md             # generated
+```
+
+`AGENTS.md` is the one index, at the project root, where Claude Code and other
+agents look for it on startup. Claude-specific instructions go in it, below
+everything else. Never create a second copy under another name.
+
+## Starting a project
+
+Asked to set a project up, start a board, or put a project on
+research-log: read [`references/initialisation.md`](references/initialisation.md)
+and follow it. Do not go straight to `init.py`.
+
+Initialisation is a conversation that ends in a script run. The script writes
+five files and copies two sections; the rest of what a project needs on day one
+— the question, what the data is, what must be frozen before the first
+computation — exists only in the head of the person starting it. It needs a
+brief, and composing that brief with them is the first half of the job.
+
+The rule that shapes all of it: they decide, you may draft. Write whatever they
+ask you to write, say which words are yours, and put nothing on the board they
+have not agreed to. A pre-commitment binds by the date it carries; authorship
+does not enter into it.
+
+## The five kinds
+
+| Kind | Written | Mutable | Leaves the project |
+|---|---|---|---|
+| hypothesis | before the evidence | yes | no |
+| experiment | after a run | never | no |
+| finding | once the claim holds | yes | yes, the only one |
+| protocol | when a procedure will be repeated | yes | no |
+| decision | when a choice is frozen | no; superseded instead | no |
+
+A hypothesis states a claim before the evidence and pre-commits to what would
+refute it; that pre-commitment is what makes the later test confirmatory. A
+finding states a claim once it holds and describes where it holds. Same shape,
+opposite times.
+
+A finding carries `class`, which says what admits its claim:
+
+| `class` | Admitted by | Required |
+|---|---|---|
+| `empirical` | runs in this project | `origin.experiments`, at least one |
+| `formal` | a proof | the premises, and where the proof is written out |
+| `review` | a search of the literature | what was searched, where, on which date |
+| `analytical` | an argument over known properties | the properties, and the range it holds over |
+
+Only `empirical` is held to `origin.experiments` by `check.py`. The rest are
+held to the prose their template asks for. A benchmark run on this project's
+data is `empirical`; a comparison argued from complexity is `analytical`. The
+class follows what established the claim, never its subject.
+
+## Frontmatter
+
+Shared by every kind: `id`, `title`, `type`, `audience`, `created`/`date`.
+
+| Kind | Adds |
+|---|---|
+| hypothesis | `status` (`idea` \| `active` \| `hold` \| `resolved` \| `recycled`), `criterion_set`, `experiments`, optional `finding`, `successor` |
+| experiment | `date` (the earliest run's date), `run:` with `tracker`, `ids`, `commit`, `dirty`, `inputs[].sha256`, `tools`; optional `rests_on`, `under`, `motivated_by`, `corrects` |
+| finding | `status`, `class`, `origin:` with `project`, `experiments`, `commit`; optional `corrects` |
+| protocol | `status` (`draft` \| `stable` \| `deprecated`) |
+| decision | `status` (`accepted` \| `superseded`), optional `superseded_by` |
+
+The templates are the source of truth for the rest. Generate from them; never
+write a document's frontmatter from this table alone.
+
+## Relations
+
+```
+vision
+  │
+  ├──► hypothesis ◄──resolves into── finding ═══► shared knowledge base
+  │        │                            │
+  │        │ cites (resolvable)         │ origin (data, not a link)
+  │        └────► experiment ◄──────────┘
+  │                │       │ rests_on
+  │        under   │       ▼
+  │                │   decision, dated on or before the run
+  │                ▼
+  │            protocol, created on or before the run
+  │
+  ╎ motivated_by: free-form string, never parsed
+  ▼
+task tracker (any) · run tracker (mlflow / aim / none)
+```
+
+| Relation | Cardinality | Required |
+|---|---|---|
+| hypothesis → experiment | M:M | no, from either side |
+| finding → experiment | 1:M via `origin` | yes when `class: empirical` |
+| finding → hypothesis | 0:1 | no |
+| experiment → decision | M:M via `rests_on` | no |
+| experiment → protocol | M:M via `under` | no |
+| experiment → run | 1:1 or 1:M | yes |
+| experiment → task | free-form string | no |
+
+Three of those optionalities are deliberate:
+
+- An experiment with no hypothesis: a baseline, an audit, a characterisation, a
+  control, a feasibility probe.
+- A hypothesis with no experiment: one not yet tested.
+- An experiment with no task: requiring a task would drop from the log every
+  experiment that had none.
+
+## When to do what
+
+### A result came out of a run
+
+Write an experiment. One document per comparison, however many runs it took.
+The wrapper fills the `run:` block; you write the title and the four sections.
+Its conclusions are bounded to that execution.
+
+### A claim the project established holds beyond one run
+
+Write a finding, and set `class` to what admits it. The bar: it changes a future
+decision, and it is no longer about one execution. Carry what it rests on inside
+it, because a finding that only points outward cannot be read once it travels.
+
+A theorem proved here, a reading of what the field has and has not done, a
+comparison argued from the methods' properties — all findings, of the classes
+above. Reach for the class by asking what would have to be wrong for the claim
+to fall: a run, a proof, a search, or an argument.
+
+### Someone commits to testing a claim
+
+Create a hypothesis at `status: idea` with the context, then move it to
+`active`. Moving it requires *What would refute it* and `criterion_set`.
+
+A hypothesis in `idea` may not list experiments: an idea with runs attached is
+hypothesising after the results are known.
+
+### You work out how something installs, runs or is assembled
+
+Write a protocol if it will be needed again: a tool's installation with its
+traps, rebuilding the metrics, assembling the report, the measurement a run
+follows.
+
+An experiment names in `under` every protocol its run followed, and `check.py`
+holds each to a creation date on or before the run. `conventions-local.md` holds
+what is true about the project; a protocol holds how to do it.
+
+### The stack, the layout or a tool becomes real
+
+Write it to `conventions-local.md` before the code that assumes it. The first
+script settles the layout, installing a tool settles a version, a linter
+settles what blocks a commit. Each is a line or two in the section that
+already holds it.
+
+Read [`presets/`](presets/) before proposing any of it, here as much as at
+initialisation: a layout, a package manager, a library for the field.
+Offer what you find there, take their correction, and write the result here.
+
+Add to the file as the project learns it. Most of it cannot be written on day
+one: a tool's one working installation route is learned the day it is
+installed, and a layout needs code before it can be described.
+
+Write it so someone on another machine can reproduce the project without
+asking. Copy in anything taken from a user-level `CLAUDE.md`, a personal skill
+or another repository; those stay behind when the project moves.
+
+`check.py` ignores this file, which has no schema. `AGENTS.md` puts it in
+front of every task, and that is all that keeps it current.
+
+### A definition or a threshold is frozen
+
+Write a decision. Mutation classes, the data slice, the cutoff, which tool
+computes what. Left undecided, these get re-decided silently and numbers stop
+being comparable.
+
+An experiment computed under one names it in `rests_on`, which is what holds
+the decision to a date on or before the run.
+
+### A hypothesis resolves
+
+Write a finding from it and set `status: resolved`, `finding: <id>`. The
+hypothesis stays as the record of the question and the dead ends; the finding
+carries the claim. Refutation resolves the same way, with a negative claim.
+
+### The question turns out to be the wrong question
+
+`status: recycled`, `successor: <id>`.
+
+## Behavioural rules
+
+- Every experiment a hypothesis cites must be dated after its `criterion_set`.
+  Editing the refutation criterion later means raising that date.
+- Every decision an experiment rests on must be dated on or before it. A
+  threshold frozen after the numbers exist can be moved until they look better.
+- Every protocol an experiment ran `under` must have been created on or before
+  it. A procedure written up after the result is not what the run followed.
+- `date` on an experiment is the earliest run's date, not the writing date. The
+  wrapper writes it.
+- An experiment is never edited. A mistake found later is a new document
+  carrying `corrects: <id>`, which also drives the blast-radius walk.
+- A number someone will compare belongs in an experiment, not in a task. The
+  task keeps a reference.
+- Citations are identifiers, never titles or paths. A slug is advisory: rewrite
+  it freely. It is always English, even when the document is not.
+- Citation flows one way, project to shared base. A finding that graduates
+  spells out its conditions in prose, because a local identifier does not
+  resolve outside the project. The export check catches this at the boundary.
+- A convention with a mechanism gets one line pointing at the mechanism, never
+  a restatement of it.
+- Local conventions may add and tighten, never loosen, and may not touch the
+  shape of a finding.
+
+## Identifiers
+
+Hypothesis, experiment, decision and protocol use `<P>-NNNN.xxx`: a type prefix,
+a sequential number, and a random three-character suffix so two branches minting
+`0042` at once do not collide. `H-0003.k3f`, `E-0012.h7q`, `D-0003.m4k`,
+`P-0001.k3f`.
+
+Findings use the shared base's own form: 13 characters of Crockford Base32 with
+a check symbol, which omits I, L, O and U and is case-insensitive, so it
+transcribes by hand without error. Minting it in that form from the start makes
+graduation a `git mv` with no citation broken.
+
+Filenames are `<ID>-<slug>.md`. Citations carry the identifier alone.
+
+**The slug is always English, whatever language the document is written in.**
+An English title slugifies itself; anything else needs `--slug` with three or
+four English words, and `new.py` and `record_run.py` refuse without it rather
+than guess. A slug names the thing in three or four words; it is not a
+translation of the title and never a transliteration of one.
+
+Never hand-assign an identifier and never reuse one.
+
+## Language
+
+Templates ship in `templates/en/` and `templates/ru/`. The project picks one at
+initialisation.
+
+Prose is translated; keys and enum values are not. `status: active`,
+`class: review`, `criterion_set`, `origin`, `under` are a wire format read by the checks
+and by the export. Section headings and guidance differ between the two
+directories; everything a machine reads is identical.
+
+This skill's own instructions stay in English, because a translated second copy
+would drift from this one.
+
+## Operations
+
+Five scripts in `scripts/`, covering the operations a person must not do by
+hand: setting a board up, allocating an identifier, writing a `run:` block, and
+the four checks that are methodological rather than clerical.
+
+```
+init.py [--brief PATH] [--lang ru] [--project NAME] [--yes]
+new.py <kind> "<title>" [--slug WORDS] [--status S] [--class C] [--rests-on ID ...] [--under ID ...] [--motivated-by REF] [--lang ru]
+record_run.py "<title>" --input PATH --tool NAME=VERSION --run-id ID [--slug WORDS] [--rests-on ID ...] [--under ID ...] [--date D]
+index.py [--check]
+check.py
+```
+
+`init.py` sets up a board in the current directory, like `git init`, and never
+asks where the project is. It needs a brief (`templates/{en,ru}/brief.md`),
+read as prose: no brief means it stops, which is also what catches an agent
+started in the wrong directory. It writes the five files, refuses to run over an existing board, and asks once
+before setting up outside a git repository. It copies the brief's question and
+out-of-scope sections into `vision.md`, which has only those two, and names on
+the way out the sections the brief does not carry. It is the middle of the
+procedure in [`references/initialisation.md`](references/initialisation.md),
+not the whole of it.
+
+`new.py` allocates under a board lock, so two agents on one checkout cannot
+mint the same number. The lock is `fcntl.flock` in the temp directory, held for
+milliseconds, which makes it a local-checkout mechanism: over NFS or sshfs it
+is unreliable, and two writers on a network mount can collide. For an
+experiment use `record_run.py`: it reads the commit, hashes the inputs and
+refuses a dirty tree. `check.py` is the gate before a commit.
+
+Which rule each script enforces is stated once, in the project's
+`conventions.md`, next to the moment that fires it.
+
+Board settings live in `<board>/.research-log.md`, at the board root
+beside the kind directories rather than inside one: `lang`, `project`,
+`id_width`, `suffix_length`. The board is `docs/` unless `--board` or
+`RESEARCH_LOG_BOARD` says otherwise. `id_width` is per board, sized from
+the table in `templates/<lang>/config.md`; it is committed and must be the same
+for every writer, because a width changed under one writer renumbers nothing
+and collides with everything.
+
+## Reference
+
+- `references/initialisation.md`: the procedure for setting a project up — the
+  checks before anything, the brief interview, what `init.py` leaves, and what
+  initialisation must never do. Read when a project is being started, and not
+  otherwise
+- `templates/{en,ru}/{hypothesis,experiment,finding,protocol,decision}.md`: the
+  five kinds, in the two shipped languages
+- `templates/{en,ru}/{conventions,vision,AGENTS,config}.md`: what a project
+  gets at initialisation, being the shipped rules, its own purpose, its index
+  and its board settings
+- `templates/{en,ru}/brief.md`: the assignment a project starts from, and the
+  input initialisation reads. One required section, read as prose and never
+  parsed. What a brief omits is the work of whoever takes the project on, and
+  initialisation does not fill it in
