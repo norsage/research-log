@@ -6,6 +6,7 @@ audience: internal
 date: 1970-01-01
 status: accepted          # accepted | superseded
 # superseded_by: <id>     # только при superseded
+# based_on: [T-0002.p4r]   # технические заметки и эксперименты, по которым сделан выбор. Каждый не позже решения
 ---
 
 ## Контекст

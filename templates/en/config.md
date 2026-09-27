@@ -19,8 +19,8 @@ lang: en
 project: ""
 
 # Characters of random discriminator appended to each local id: H-0042.k3f.
-# Applies to hypotheses, experiments and decisions. Findings are unaffected:
-# their identifier is opaque and globally unique by construction.
+# Applies to every kind except findings, whose identifier is opaque and
+# globally unique by construction.
 #
 # This is a wire format rather than a preference. Commit it, and keep it the
 # same for every writer on this board. The number is allocated as max+1, so
@@ -47,7 +47,7 @@ suffix_length: 3
 id_width: 4
 ---
 
-# Knowledge board settings
+# Board settings
 
 The frontmatter above configures this board. The body is yours, and is a good
 place for what belongs to this board rather than to the tool: which run tracker

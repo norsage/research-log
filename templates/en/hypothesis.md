@@ -20,8 +20,7 @@ This section is what makes an idea worth keeping before anyone commits to it.
 
 ## What would refute it
 
-Filled in when the status moves to `active`, and empty before that. Moving to
-`active` is the commitment, and this section is that commitment.
+Filled in when the status moves to `active`, before the first run.
 
 An observable result, after which the hypothesis is held to be refuted. Editing
 it once experiments exist means raising `criterion_set`, which is what makes

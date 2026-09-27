@@ -15,10 +15,6 @@ run:
   tracker: mlflow            # or aim, or none
   ids: []
   commit: SHA
-  dirty: false
-  inputs:
-    - path: PATH
-      sha256: HASH
   tools: {}
 ---
 

@@ -25,6 +25,12 @@ reason this script exists at all:
     protocol written after the run is a procedure reconstructed from the
     result.
 
+One more keeps two kinds apart. A technote records a run that checked the
+project's tooling, and no hypothesis or experiment may cite it: what tests a
+hypothesis is an experiment. A finding names technotes in `origin.technotes`,
+kept apart from `origin.experiments` so its footing stays visible. A decision
+may name technotes and experiments in `based_on`, each dated on or before it.
+
 Everything else is well-formedness: fields present, identifiers unique and
 resolvable, vocabularies respected. A finding's `class` decides which of those
 applies: `origin.experiments` is required of the empirical class and of no
@@ -41,7 +47,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (  # noqa: E402
     AUDIENCES, DECISION_STATUSES, FINDING_CLASSES, FINDING_STATUSES,
     HYPOTHESIS_STATUSES, KINDS, PROTOCOL_STATUSES,
-    as_date, find_root, iter_docs, parse_local_id, valid_finding_id,
+    as_date, board_root, find_root, iter_docs, load_config, parse_local_id,
+    skill_root, template_version, valid_finding_id,
 )
 
 STATUS_VOCAB = {
@@ -53,6 +60,7 @@ STATUS_VOCAB = {
 REQUIRED = {
     "hypothesis": ("id", "title", "type", "audience", "status"),
     "experiment": ("id", "title", "type", "audience", "date"),
+    "technote": ("id", "title", "type", "audience", "date"),
     "finding": ("id", "title", "type", "audience", "status", "class"),
     "decision": ("id", "title", "type", "audience", "status", "date"),
     "protocol": ("id", "title", "type", "audience", "status", "created"),
@@ -151,17 +159,43 @@ def run_checks(root: Path, board: str | None) -> Report:
                 if ref and not resolves(ref):
                     rep.error(path, f"{field}: {ref} does not resolve")
 
+            ref = meta.get("corrects")
+            if kind in ("experiment", "technote") and ref and resolves(ref):
+                target = by_id[str(ref)][0]
+                if target != kind:
+                    rep.error(path, f"corrects {ref}, which is a {target}. A "
+                                    f"{kind} corrects a {kind}")
+
             if kind == "hypothesis":
                 _check_hypothesis(rep, path, meta, by_id, resolves)
-            elif kind == "experiment":
-                _check_experiment(rep, path, meta, by_id, resolves)
+            elif kind in ("experiment", "technote"):
+                _check_run(rep, path, meta, by_id, resolves, kind)
             elif kind == "finding":
-                _check_finding(rep, path, meta, resolves)
+                _check_finding(rep, path, meta, by_id, resolves)
             elif kind == "decision":
                 if status == "superseded" and not meta.get("superseded_by"):
                     rep.error(path, "status is superseded but superseded_by is empty")
+                _check_decision(rep, path, meta, by_id, resolves)
 
+    _check_conventions_version(rep, root, board)
     return rep
+
+
+def _check_conventions_version(rep, root, board) -> None:
+    """Warn when the board's conventions.md is older than the installed skill's."""
+    path = board_root(root, board) / "conventions.md"
+    if not path.is_file():
+        return
+    try:
+        lang = load_config(root, board)["lang"]
+    except ValueError:
+        return
+    shipped = skill_root() / "templates" / lang / "conventions.md"
+    have = template_version(path.read_text())
+    ship = template_version(shipped.read_text())
+    if have < ship:
+        rep.warn(path, f"template {'.'.join(map(str, have)) or 'none'}, the skill "
+                       f"ships {'.'.join(map(str, ship))}. Run upgrade.py")
 
 
 def _check_hypothesis(rep, path, meta, by_id, resolves) -> None:
@@ -186,7 +220,12 @@ def _check_hypothesis(rep, path, meta, by_id, resolves) -> None:
         if not resolves(ref):
             rep.error(path, f"cites experiment {ref}, which does not resolve")
             continue
-        _, _, exp_meta = by_id[str(ref)]
+        ref_kind, _, exp_meta = by_id[str(ref)]
+        if ref_kind != "experiment":
+            rep.error(path, f"cites {ref}, which is a {ref_kind}. A hypothesis "
+                            "is tested by experiments; a run over the tooling "
+                            "says nothing about its claim")
+            continue
         exp_date = as_date(exp_meta.get("date"))
         if criterion and exp_date and exp_date < criterion:
             rep.error(path, f"experiment {ref} ran {exp_date}, before "
@@ -200,7 +239,8 @@ def _check_hypothesis(rep, path, meta, by_id, resolves) -> None:
         rep.error(path, "status is recycled but successor is empty")
 
 
-def _check_experiment(rep, path, meta, by_id, resolves) -> None:
+def _check_run(rep, path, meta, by_id, resolves, doc_kind) -> None:
+    """An experiment or a technote: the same `run:` record, different citers."""
     run = meta.get("run") or {}
     if not isinstance(run, dict):
         rep.error(path, "run: must be a mapping")
@@ -209,11 +249,14 @@ def _check_experiment(rep, path, meta, by_id, resolves) -> None:
         rep.error(path, "run.commit is empty - nothing pins the code that ran")
     if run.get("dirty"):
         rep.warn(path, "run.dirty is true: the commit does not describe what ran")
-    if not run.get("inputs"):
-        rep.warn(path, "run.inputs is empty - git pins code, not a data slice")
 
     ran = as_date(meta.get("date"))
-    for ref in as_list(rep, path, "rests_on", meta.get("rests_on")):
+    rests_on = as_list(rep, path, "rests_on", meta.get("rests_on"))
+    if doc_kind == "technote" and rests_on:
+        rep.error(path, "a technote has no rests_on. A decision that rests on "
+                        "this technote names it in based_on")
+        rests_on = []
+    for ref in rests_on:
         if not resolves(ref):
             rep.error(path, f"rests_on names {ref}, which does not resolve")
             continue
@@ -244,7 +287,24 @@ def _check_experiment(rep, path, meta, by_id, resolves) -> None:
                             "what the run followed")
 
 
-def _check_finding(rep, path, meta, resolves) -> None:
+def _check_decision(rep, path, meta, by_id, resolves) -> None:
+    decided = as_date(meta.get("date"))
+    for ref in as_list(rep, path, "based_on", meta.get("based_on")):
+        if not resolves(ref):
+            rep.error(path, f"based_on names {ref}, which does not resolve")
+            continue
+        kind, _, src_meta = by_id[str(ref)]
+        if kind not in ("technote", "experiment"):
+            rep.error(path, f"based_on names {ref}, which is a {kind}. It names "
+                            "the technotes and experiments the choice was made on")
+            continue
+        ran = as_date(src_meta.get("date"))
+        if decided and ran and ran > decided:
+            rep.error(path, f"based on {ref}, which ran {ran}, after this was "
+                            f"decided {decided}")
+
+
+def _check_finding(rep, path, meta, by_id, resolves) -> None:
     klass = meta.get("class")
     if klass and klass not in FINDING_CLASSES:
         rep.error(path, f"class {klass!r} not in {FINDING_CLASSES}")
@@ -257,14 +317,21 @@ def _check_finding(rep, path, meta, resolves) -> None:
         rep.error(path, "origin.project is empty - a finding that travels must "
                         "say where it came from")
     experiments = as_list(rep, path, "origin.experiments", origin.get("experiments"))
-    if not experiments and klass == "empirical":
-        rep.error(path, "origin.experiments is empty on an empirical finding - "
-                        "a claim resting on runs must name them, and a claim "
-                        "resting on something else belongs to another class")
-    for ref in experiments:
-        if not resolves(ref):
-            rep.warn(path, f"origin names {ref}, which does not resolve here. "
-                           "Expected if this finding came from another project")
+    technotes = as_list(rep, path, "origin.technotes", origin.get("technotes"))
+    if not experiments and not technotes and klass == "empirical":
+        rep.error(path, "origin names no experiments or technotes on an empirical "
+                        "finding - a claim resting on runs must name them, and a "
+                        "claim resting on something else belongs to another class")
+    for field, refs, want in (("experiments", experiments, "experiment"),
+                              ("technotes", technotes, "technote")):
+        for ref in refs:
+            if not resolves(ref):
+                rep.warn(path, f"origin.{field} names {ref}, which does not resolve "
+                               "here. Expected if this finding came from another project")
+                continue
+            ref_kind = by_id[str(ref)][0]
+            if ref_kind != want:
+                rep.error(path, f"origin.{field} names {ref}, which is a {ref_kind}")
 
 
 def main() -> int:

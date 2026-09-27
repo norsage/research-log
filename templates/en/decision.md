@@ -6,6 +6,7 @@ audience: internal
 date: 1970-01-01
 status: accepted          # accepted | superseded
 # superseded_by: <id>     # only when superseded
+# based_on: [T-0002.p4r]   # technotes and experiments the choice was made on. Each must predate it
 ---
 
 ## Context

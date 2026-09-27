@@ -208,6 +208,66 @@ papers are external, cited, and the base's material once one exists. The claim
 it is what a hypothesis' novelty rests on — a finding of the review class.
 Splitting those apart is what made the edge decidable.
 
+### 1.8 Technotes: runs over the tooling
+
+Decided 2026-09-27. A sixth kind, `technote`, records a run that checked the
+project's tooling rather than its subject. It carries the same `run:` block as
+an experiment and is written by `record_run.py --kind technote`.
+
+**What went wrong.** The conventions sent every number someone would later
+compare to an experiment. In a project about training models, a benchmark of
+the parsing code was filed as an experiment because its numbers were compared,
+although nothing in it bore on the project's question. The project patched
+this locally: speed measurements and comparisons of reading and features
+against other libraries went to task notes, with the script, the commit, the
+inputs with sha256, the machine and the versions written beside them.
+
+**Why the local patch was not enough.** Task notes pile up in the tracker, and
+a result someone needs a month later is hard to find there. The conditions the
+project listed are the `run:` block almost field by field, so the record
+already existed. Only its name and its citers had to change.
+
+**Where the boundary runs.** The boundary is what the run examined. An
+experiment's result says something about the subject of the research; a
+technote's says whether a tool can be trusted. The test: would a different
+number change an answer to the question in `vision.md`, or only an opinion of a
+tool? Data analysis is an experiment, because it changes what is known about
+the data the conclusions are drawn from. So is the project's main computation. A run in
+doubt is an experiment: a technote filed as an experiment clutters the log,
+while an experiment filed as a technote can no longer test a hypothesis. A
+doubt that recurs is settled once by the user and written to
+`conventions-local.md` as a class of runs.
+
+**What `check.py` holds.** No hypothesis cites a technote, and no experiment
+rests on one. A finding may name technotes in `origin.technotes`, kept apart
+from `origin.experiments`, because a technical detail sometimes matters in its
+own right and is worth carrying to another project. A decision names the
+technotes and experiments its choice was made on in the new `based_on`, each
+dated on or before it. Through that chain, from technote to decision to
+experiment, a technote later found wrong reaches every run computed with the
+tool it vouched for.
+
+Rejected: a field on the experiment, such as `subject: tooling`, which the
+reasoning of §1.7 would favour. Finding classes share their relations and
+differ only in what admits the claim. A technote differs in who may cite it,
+which is what `check.py` enforces, and a field would leave tooling runs in
+`docs/experiments/` under the name that caused the error.
+
+Rejected: routing every tooling check into a decision or a protocol. A protocol
+is an instruction and holds no results. A decision needs a choice, and many
+checks end without one.
+
+Rejected: requiring a task tracker at initialisation. It would add to the
+tracker's load, which was the complaint, and §3.1 keeps this skill independent
+of any tracker.
+
+Rejected: the names `measurement` and `note`. Data analysis is a measurement
+too, which blurred the boundary the kind was meant to draw, and `note` invites
+drafts, reviews and plans.
+
+Rejected: a `machine` field in `run:`. When a technote's numbers depend on the
+hardware, its text says what the hardware was.
+
 ## 2. What enforces it: checks, fields, identifiers, language
 
 ### 2.1 The pre-commitment is checked by comparing two dates
@@ -343,6 +403,29 @@ indistinguishable from noise is `no-effect-band`. That it reads better than a
 translation would is a side effect of the same constraint that makes every
 filename in every project greppable from any machine.
 
+### 2.7 `run:` hashes no files
+
+Decided 2026-09-27. `record_run.py` no longer takes `--input`, and `run:`
+records the commit, `dirty` when it is true, the tools and the tracker's run ids. The version
+of the data is the project's to pin.
+
+The hashes were justified by one sentence, that git pins code and not a data
+slice. In practice they did not pin anything. For files in git a hash repeats
+the commit: in one real technote all eight entries were committed fixtures,
+sixteen lines that added nothing. For data outside git a hash says the file
+changed, not where it came from or how to get the old one back. And the
+`check.py` warning on an empty list pushed people to fill it with whatever was
+at hand, which is how the fixtures got there.
+
+Versioning data is a separate tool's job. Under DVC the lock file is in git,
+so `run.commit` pins the data along with the code and a hash in the log is
+redundant. Without such a tool the hash restores nothing either. What remains
+is a sentence in the protocol or the document saying where the data came from
+and which version it was.
+
+Not taken: reading `dvc.lock` into `run:`. It is worth doing once a project
+actually uses DVC, and not before.
+
 ## 3. The files a project gets
 
 ### 3.1 The watershed: who owns a document's shape
@@ -378,8 +461,8 @@ Two rules came out of this and saved real text:
 - A convention with a mechanism is not restated in prose. One line pointing at
   the script. Two sources of truth for one rule diverge.
 - Half of "commit before running" is not a convention but a check in the
-  wrapper. Git pins code, not a data slice, so inputs need a content hash
-  beside the commit or the reproducibility is imaginary.
+  wrapper. The other half, pinning the data, is the project's; §2.7 says why
+  the log stopped trying.
 
 ### 3.3 What was cut from the source document
 
@@ -394,23 +477,46 @@ lines, cut down to what a fresh project needs on day one.
 | six invariants and `check_layout.py` | dropped entirely: CI over accumulated content. On an empty project there is nothing to catch, and a check that is red on day one trains everyone to ignore CI |
 | "a field with no reader goes stale in silence" | kept, one line |
 
-### 3.4 vision.md is two sections, and its history is git
+### 3.4 vision.md is the question and the directions, and its history is git
 
-Decided: `vision.md` carries the question and what is out of scope, both filled
-from the brief at initialisation, and nothing else.
+Decided: `vision.md` carries the question, copied from the brief at
+initialisation, and the project's directions, which start empty. Nothing else.
 
 Removed: *Why it matters* and *What would end it*. Both failed the test that
-decided §4.3 — nothing reads them. No script parses either, no check touches
+decided §4.3: nothing reads them. No script parses either, no check touches
 either, and once the entrance stopped asking for them (§4.3) they were template
 text that would sit unwritten forever. The applied purpose now lives inside the
 question, where the one real brief had put it unprompted. A project's end is
 what a deadline and a supervisor are for, and this skill was pretending to hold
 it without any mechanism that could.
 
-`init.py` therefore copies two sections rather than one. That also fixes an
-asymmetry nobody had noticed: the interview asked what is out of scope, stored
-the answer in the brief, and left `vision.md` holding an empty section for the
-same thing.
+Removed later: *Out of scope*, from the brief template, the interview and
+`vision.md`. At the start of a research project nobody knows where its
+boundaries are, and asking "is anything already ruled out?" got either nothing
+or exclusions made up to answer the question. What the section could honestly
+hold goes to two places that already existed. An exclusion set by the
+assignment, such as a ban on licensed software, is a constraint and sits with
+the brief's constraints. An exclusion found during the work is a decision,
+which is dated, can be named in `rests_on`, and is checked. `init.py` is back
+to copying one section.
+
+Added: *Directions*. In the source project nine directions appeared during the
+work, each in a file of its own, linked to hypotheses many to many, with states
+such as "exhausted" and "premise answered negatively" kept in prose and in no
+field. One of them, on relative binding free energy, was created a month after
+the vision had listed it as a priority, and in that month its hypotheses had
+spread over four other directions. The level is real, and it appears late, so
+the template gives it a place and asks nothing about it on day one. A
+direction is a subheading with its state in words; one that is set aside stays,
+with the reason, which is the job the old out-of-scope section of `vision.md`
+was actually doing. The named source for the level is Goal-Question-Metric +
+Strategies (Basili et al., *Computer* 43(4), 2010).
+
+Rejected for now: a `direction` kind with an identifier, a status and a
+`directions` field on hypotheses. A field that nothing reads goes stale
+unnoticed, and a project on its first day has no hypotheses to group. The
+trigger for revisiting is the first direction that needs a state something
+could query, or a summary of its own when it closes.
 
 Rejected: any structure for tracking how the vision changes — a changelog
 section, a `scope_set` date in the frontmatter mirroring `criterion_set`. Most
@@ -420,8 +526,8 @@ gets one line pointing at the mechanism" forbids. The `scope_set` date fails
 for a harder reason: nothing cites `vision.md`, so there is no second date to
 compare it against and no check could be written.
 
-The one dangerous change — narrowing the question or widening the boundary
-after the first numbers exist — is the disease decisions already cure. It is
+The one dangerous change, narrowing the question after the first numbers
+exist, is the disease decisions already cure. It is
 recorded as a decision, which is dated, can be named in `rests_on`, and is
 therefore checkable. One line in the template points at that, and no new
 machinery was added for it.
@@ -531,7 +637,8 @@ statement of that is in `SKILL.md` rather than a check that approximates one.
 
 ### 3.7 One index file, once Claude Code stopped needing two
 
-Decided: `init.py` writes `AGENTS.md` and nothing else at the project root.
+Decided: nothing at the project root is written but `AGENTS.md`. Since §3.8 the
+agent writes it, not `init.py`.
 
 Until 2026-09-18 it also wrote a `CLAUDE.md` holding the single line
 `@AGENTS.md`, because Claude Code read `CLAUDE.md` and ignored `AGENTS.md`
@@ -549,6 +656,39 @@ The general form: two files holding one instruction is a workaround for a
 reader, not a design. When the reader is fixed the workaround goes, and the
 check that it is really gone is that nothing has to explain which of the two is
 authoritative.
+
+### 3.8 An upgrade rewrites the skill's files, and AGENTS.md is the project's
+
+Decided 2026-09-27. `upgrade.py` replaces `conventions.md` whole when its
+`template_version` is older than the skill's, and `check.py` warns when it is
+behind. The one other thing it rewrites is `run.inputs` (§2.7), which it
+removes line by line. Nothing else in the project is rewritten.
+
+The split follows §3.1. `conventions.md` is copied from the template verbatim,
+so overwriting it loses nothing. `AGENTS.md` used to hold the map of the board
+as well, which made it half the skill's and half the project's, and every way
+of upgrading such a file was a merge. The map moved into `conventions.md`.
+What stays is three links that change only when a new file has to be read
+before every task. `init.py` does not write them: the agent adds them at
+initialisation, because it can see what a script cannot, whether the project's
+agents read `AGENTS.md` or `CLAUDE.md` and whether the file already says some
+of it. After that the file is the project's.
+
+A file with uncommitted changes is refused, so `git diff` is the whole record
+of an upgrade.
+
+Rejected: markers around the skill's part of `AGENTS.md`, replaced on upgrade.
+Agents add rows to that table, and the next upgrade would erase them.
+
+Rejected: a three-way merge against a copy of the template stored in the
+project. It works, and it is a second file kept only to repair the mixed
+ownership that moving the map removed.
+
+Migrating documents is the exception. New fields stay optional, so an old
+document remains valid and nothing has to be rewritten. A removed field is also
+valid and nothing checks for it, but it is noise in every block that still
+carries it, so `upgrade.py` removes it. The `run:` block is the wrapper's, not the author's,
+which is why rewriting it is the skill's business.
 
 ---
 
@@ -798,7 +938,7 @@ have already said, offered only after a question failed to land.
 
 ## Implementation lessons
 
-Seven bugs found while building, kept because each is a trap the next change
+Eight bugs found while building, kept because each is a trap the next change
 can walk back into.
 
 - The slug regex was `[^\w\s-]` with `re.UNICODE`, which keeps every Unicode
@@ -821,8 +961,8 @@ can walk back into.
   `brief-mutation-effect.md` never showed it. A default returned by value is
   not the same as a setting, and a fallback chain has to distinguish them.
 
-- `init.py` matches template prose literally: the task-tracker row it swaps in
-  `AGENTS.md`, and the brief's optional-section headings it reports as missing.
+- `init.py` matches template prose literally: the brief's optional-section
+  headings it reports as missing.
   Rewording a template silently turns those substitutions into no-ops, and no
   check catches it. Rewording `templates/<lang>/` means grepping `init.py` for
   the strings it carries in that language.
@@ -844,6 +984,13 @@ can walk back into.
   tree; if that blocked a run recording, `--allow-dirty` would be habitual
   within a week and the check would be over. The board directory is excluded
   from the dirty scan.
+- Crockford's check symbol is the value modulo 37, and five of the 37 values
+  map to `*~$=U`. The first finding minted in a real project was
+  `DHMWSN0CD09VJ*`, and a `*` in a filename is expanded by the shell as a
+  glob. `mint_finding_id` now redraws until the check symbol is a letter or a
+  digit, which loses about 0.2 bits of the 65 and keeps every existing id
+  valid. The validator still accepts all 37: an id already minted is never
+  renamed.
 
 ## Designed but untested
 

@@ -6,7 +6,7 @@ words. Skip it for every later operation; the rules for those are in `SKILL.md`
 and in the project's own `conventions.md`.
 
 Initialisation is a conversation that ends in a script run. `init.py` writes
-five files and copies two sections. The rest of what a project needs on day one
+five files and copies one section. The rest of what a project needs on day one
 only exists in the head of the person starting it, and the only way to get it
 out is to ask.
 
@@ -61,9 +61,9 @@ Four checks, all cheap:
    never asks. Confirm it with them if there is any doubt.
 2. **Is it a git repository?** Every check this skill makes rests on the
    commit. If not, offer `git init` and say why.
-3. **Is a board already here?** `AGENTS.md`, `docs/conventions.md`,
-   `docs/hypotheses/`. If so this is not initialisation — say what is there and
-   ask what they actually want.
+3. **Is a board already here?** `docs/conventions.md`, `docs/hypotheses/`.
+   If so this is not initialisation — say what is there and ask what they
+   actually want. An `AGENTS.md` or `CLAUDE.md` alone is not a board.
 4. **Does a brief already exist?** Look for `brief.md`, `BRIEF.md`,
    `docs/brief.md`, and then ask. Many projects have an assignment that is not
    called a brief: a task statement, a supervisor's document, a grant section,
@@ -100,7 +100,7 @@ have something to put there.
 **Then context.** Where the question came from, what is already known, what has
 been tried and how it came out.
 
-**Then five more topics, over three messages.**
+**Then four more topics, over three messages.**
 
 What follows is what to cover, not what to say: **never read these tables
 out**, and hold every question to *How to ask* above. When an earlier answer
@@ -115,15 +115,14 @@ can answer, and their answers are the ones the rest of the board is built from.
 | Hypothesis | *"Do you already expect a particular answer? If so, what result would make you say you were wrong?"* | "I do not know, that is why I am doing this" is a complete and correct answer: the project is exploratory, say so and move on. Do not talk them into one. If they ask you to draft one, draft it and mark it as your wording for them to accept or reject |
 | Before the first computation | *"Some numbers in this work you will choose yourself rather than measure — what counts as a real effect, which cases to keep. Which of those can you name now?"* | The highest-value answer in the interview: each one becomes a dated decision in phase 3, and those are what the third check enforces. If it does not land, make it concrete from their own domain — one plausible threshold from what they have just told you, offered as an example of the kind of thing, not as a proposal |
 
-**Then the remaining three together, in one short message.** These are
-cheap to answer and cost more in round trips than in thought. Three questions,
-no preamble, no restating the sections.
+**Then the remaining two together, in one short message.** These are cheap
+to answer and cost more in round trips than in thought. Two questions, no
+preamble, no restating the sections.
 
 | Topic | Ask something like | What you are listening for |
 |---|---|---|
 | Data | *"What data do you have already, and where is it? If you do not have it yet, where will it come from?"* | Where it is, how it was produced, what has already been done to it. A dataset that is named but not reachable is worth writing down as exactly that |
-| Constraints | *"How long is the project, and how many of you are there? Is anything in the way, like a paid tool or weak hardware?"* | "Two months, one person" changes the shape of everything downstream. Licences matter when a tool is on the critical path |
-| Out of scope | *"What is definitely not part of this project?"* | Cheap on day one, expensive later. If it does not land, one example from what they have already described, not three |
+| Constraints | *"How long is the project, and how many of you are there? Is anything in the way, like a paid tool or weak hardware?"* | "Two months, one person" changes the shape of everything downstream. Licences matter when a tool is on the critical path. Something the assignment rules out, such as a tool that may not be used, is a constraint too and goes here. Do not ask what else is ruled out and do not suggest exclusions: at the start the boundaries are unknown, and ones found later are recorded as decisions |
 
 Say once, at the start of that message, that skipping is allowed and an empty
 section is not a defect. Do not repeat it after every question.
@@ -142,10 +141,10 @@ python3 <skill>/scripts/init.py --brief PATH
 ```
 
 It refuses over an existing board and asks once outside a git repository. It
-writes `AGENTS.md` at the root and `vision.md`, `conventions.md`,
-`conventions-local.md` and `.research-log.md` on the board, copies the
-brief's question and its out-of-scope section into `vision.md`, and ends by
-naming the sections the brief does not carry.
+writes `vision.md`, `conventions.md`, `conventions-local.md` and
+`.research-log.md` on the board and nothing at the root, copies the brief's
+question into `vision.md`, and ends by naming the sections the brief does not
+carry.
 
 Relay that closing list to them as it is. It is the agenda for what follows,
 not an error.
@@ -155,10 +154,19 @@ not an error.
 The question is the only thing it copies. What remains is conversation
 rather than editing.
 
-**`vision.md`.** It has two sections, the question and what is out of scope,
-and `init.py` filled both from the brief. Read them back, take any correction,
-and **ask nothing further**. Where the brief said nothing, the template's own
-prompt stays in place for the researcher to answer once the work has a shape.
+**`AGENTS.md`.** Point the project's agent instructions at the board: add the
+section in `templates/<lang>/agents-section.md` to the file the project's
+agents read. That is `AGENTS.md`; if the project has a `CLAUDE.md` and no
+`AGENTS.md`, it is `CLAUDE.md`; if it has neither, create `AGENTS.md` with the
+project's name as its title. Where the file already says something the section
+repeats, merge rather than duplicate. Show them the result. The skill never
+touches this file again.
+
+**`vision.md`.** It has two sections. `init.py` filled the question from the
+brief; read it back, take any correction, and **ask nothing further**. The
+second section, the project's directions, stays empty: directions appear once
+several hypotheses turn out to be about the same thing, and asking for them on
+day one would get invented ones.
 
 **`conventions-local.md`.** Read the repository first: `pyproject.toml`, a
 lockfile, `environment.yml`, `Makefile`, a test directory. Propose what you
@@ -192,7 +200,7 @@ whenever you work out how something installs, runs or is assembled and it will
 be needed again, write it as a protocol.
 
 **A task tracker, only if one is already installed.** `init.py` says on the way
-out whether it found the task-tracker skill. If it did, offer it in the same
+out if it found the task-tracker skill. If it did, offer it in the same
 message as the `conventions-local.md` draft: tasks would live in `docs/tasks/`,
 and an experiment's `motivated_by` would carry one of its ids. There is nothing
 to create — task-tracker has no initialisation and builds its directories on

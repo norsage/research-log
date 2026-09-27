@@ -1,6 +1,6 @@
 ---
 name: research-log
-description: Markdown record kept beside a project's code: hypotheses, experiments, findings, protocols and decisions with stable identifiers. Use when a research or analysis project is being set up, started, or given a research log, in whatever words the user reaches for; whenever a project records what was measured, what it means, how a procedure is run, or why a choice was frozen; when the user asks where a result, a claim, a literature review or a runbook should go; or when the project contains docs/{hypotheses,experiments,findings,protocols,decisions}/ with frontmatter'd markdown. Independent of any task tracker.
+description: Markdown record kept beside a project's code: hypotheses, experiments, technotes, findings, protocols and decisions with stable identifiers. Use when a research or analysis project is being set up, started, or given a research log, in whatever words the user reaches for; whenever a project records what was measured, what it means, how a procedure is run, or why a choice was frozen; when the user asks where a result, a benchmark, a claim, a literature review or a runbook should go; or when the project contains docs/{hypotheses,experiments,technotes,findings,protocols,decisions}/ with frontmatter'd markdown. Independent of any task tracker.
 ---
 
 # Research log
@@ -11,7 +11,7 @@ particular tracker and works the same with task-tracker, Jira, GitHub issues or
 nothing at all.
 
 ```
-AGENTS.md                     # index, ~30 lines, points at everything else
+AGENTS.md                     # the project's; points at docs/
 docs/
 ├── .research-log.md     # board settings (committed)
 ├── conventions.md            # shipped by this skill. Machine-owned, never hand-edited
@@ -22,6 +22,8 @@ docs/
 │   └── _index.md             # generated
 ├── experiments/
 │   └── E-NNNN.xxx-slug.md
+├── technotes/
+│   └── T-NNNN.xxx-slug.md
 ├── findings/
 │   └── <OPAQUE-ID>-slug.md
 ├── protocols/
@@ -33,8 +35,12 @@ docs/
 ```
 
 `AGENTS.md` is the one index, at the project root, where Claude Code and other
-agents look for it on startup. Claude-specific instructions go in it, below
-everything else. Never create a second copy under another name.
+agents look for it on startup. It belongs to the project. At initialisation
+the agent adds the section in `templates/<lang>/agents-section.md` to it (or to
+`CLAUDE.md`, if that is what the project uses), and the skill never touches it
+again. The map of the board lives in `conventions.md`, which the skill owns.
+Claude-specific instructions go in `AGENTS.md`, below everything else. Never
+create a second copy under another name.
 
 ## Starting a project
 
@@ -43,7 +49,7 @@ research-log: read [`references/initialisation.md`](references/initialisation.md
 and follow it. Do not go straight to `init.py`.
 
 Initialisation is a conversation that ends in a script run. The script writes
-five files and copies two sections; the rest of what a project needs on day one
+five files and copies one section; the rest of what a project needs on day one
 — the question, what the data is, what must be frozen before the first
 computation — exists only in the head of the person starting it. It needs a
 brief, and composing that brief with them is the first half of the job.
@@ -53,15 +59,27 @@ ask you to write, say which words are yours, and put nothing on the board they
 have not agreed to. A pre-commitment binds by the date it carries; authorship
 does not enter into it.
 
-## The five kinds
+## The six kinds
 
 | Kind | Written | Mutable | Leaves the project |
 |---|---|---|---|
 | hypothesis | before the evidence | yes | no |
-| experiment | after a run | never | no |
+| experiment | after a run over the project's subject | never | no |
+| technote | after a run over the project's tooling | never | no |
 | finding | once the claim holds | yes | yes, the only one |
 | protocol | when a procedure will be repeated | yes | no |
 | decision | when a choice is frozen | no; superseded instead | no |
+
+An experiment and a technote are the same record over a run. They differ in
+what the run examined. An experiment's result says something about the subject
+of the research: the model, the method, the data. A technote's result says
+whether the project's tools can be trusted: parsing speed, agreement with
+another library, whether features are read correctly. The test: would a
+different number change an answer to the question in `vision.md`, or only an
+opinion of a tool? The project's main computation, such as training and
+evaluating a model, is always an experiment. When the test is unclear, write an
+experiment. If the same doubt comes back, ask the user once and record the
+answer in `conventions-local.md` as a class of runs.
 
 A hypothesis states a claim before the evidence and pre-commits to what would
 refute it; that pre-commitment is what makes the later test confirmatory. A
@@ -72,15 +90,16 @@ A finding carries `class`, which says what admits its claim:
 
 | `class` | Admitted by | Required |
 |---|---|---|
-| `empirical` | runs in this project | `origin.experiments`, at least one |
+| `empirical` | runs in this project | at least one in `origin.experiments` or `origin.technotes` |
 | `formal` | a proof | the premises, and where the proof is written out |
 | `review` | a search of the literature | what was searched, where, on which date |
 | `analytical` | an argument over known properties | the properties, and the range it holds over |
 
-Only `empirical` is held to `origin.experiments` by `check.py`. The rest are
-held to the prose their template asks for. A benchmark run on this project's
-data is `empirical`; a comparison argued from complexity is `analytical`. The
-class follows what established the claim, never its subject.
+Only `empirical` is held to `origin` by `check.py`. The rest are held to the
+prose their template asks for. A benchmark run in this project is `empirical`,
+whether an experiment or a technote records it; a comparison argued from
+complexity is `analytical`. The class follows what established the claim,
+never its subject.
 
 ## Frontmatter
 
@@ -89,10 +108,11 @@ Shared by every kind: `id`, `title`, `type`, `audience`, `created`/`date`.
 | Kind | Adds |
 |---|---|
 | hypothesis | `status` (`idea` \| `active` \| `hold` \| `resolved` \| `recycled`), `criterion_set`, `experiments`, optional `finding`, `successor` |
-| experiment | `date` (the earliest run's date), `run:` with `tracker`, `ids`, `commit`, `dirty`, `inputs[].sha256`, `tools`; optional `rests_on`, `under`, `motivated_by`, `corrects` |
-| finding | `status`, `class`, `origin:` with `project`, `experiments`, `commit`; optional `corrects` |
+| experiment | `date` (the earliest run's date), `run:` with `tracker`, `ids`, `commit`, `dirty` (only when `true`), `tools`; optional `rests_on`, `under`, `motivated_by`, `corrects` |
+| technote | as experiment, without `rests_on` |
+| finding | `status`, `class`, `origin:` with `project`, `experiments`, `technotes`, `commit`; optional `corrects` |
 | protocol | `status` (`draft` \| `stable` \| `deprecated`) |
-| decision | `status` (`accepted` \| `superseded`), optional `superseded_by` |
+| decision | `status` (`accepted` \| `superseded`), optional `superseded_by`, `based_on` |
 
 The templates are the source of truth for the rest. Generate from them; never
 write a document's frontmatter from this table alone.
@@ -120,17 +140,18 @@ task tracker (any) · run tracker (mlflow / aim / none)
 | Relation | Cardinality | Required |
 |---|---|---|
 | hypothesis → experiment | M:M | no, from either side |
-| finding → experiment | 1:M via `origin` | yes when `class: empirical` |
+| finding → experiment, technote | 1:M via `origin` | at least one run when `class: empirical` |
 | finding → hypothesis | 0:1 | no |
 | experiment → decision | M:M via `rests_on` | no |
 | experiment → protocol | M:M via `under` | no |
 | experiment → run | 1:1 or 1:M | yes |
 | experiment → task | free-form string | no |
+| decision → technote, experiment | M:M via `based_on` | no |
 
 Three of those optionalities are deliberate:
 
-- An experiment with no hypothesis: a baseline, an audit, a characterisation, a
-  control, a feasibility probe.
+- An experiment with no hypothesis: a baseline, an audit of the data, a
+  characterisation, a control, a feasibility probe of a method.
 - A hypothesis with no experiment: one not yet tested.
 - An experiment with no task: requiring a task would drop from the log every
   experiment that had none.
@@ -142,6 +163,19 @@ Three of those optionalities are deliberate:
 Write an experiment. One document per comparison, however many runs it took.
 The wrapper fills the `run:` block; you write the title and the four sections.
 Its conclusions are bounded to that execution.
+
+### A run checked the tooling
+
+Write a technote with `record_run.py --kind technote`: a benchmark of the
+project's code, a comparison against another library, a check that files or
+features are read correctly. It carries the same `run:` block as an experiment.
+
+If a choice was made on it, also write a decision naming it in `based_on`.
+Experiments computed with the chosen tool then rest on that decision, so a
+technote later found wrong leads through the decision to every run it touched.
+
+A smoke test or a debugging session, whose numbers nobody will compare, stays
+in the task.
 
 ### A claim the project established holds beyond one run
 
@@ -223,10 +257,14 @@ carries the claim. Refutation resolves the same way, with a negative claim.
   it. A procedure written up after the result is not what the run followed.
 - `date` on an experiment is the earliest run's date, not the writing date. The
   wrapper writes it.
-- An experiment is never edited. A mistake found later is a new document
-  carrying `corrects: <id>`, which also drives the blast-radius walk.
-- A number someone will compare belongs in an experiment, not in a task. The
-  task keeps a reference.
+- An experiment or a technote is never edited. A mistake found later is a new
+  document of the same kind carrying `corrects: <id>`, which also drives the
+  blast-radius walk.
+- A number someone will compare belongs in an experiment or a technote, not in
+  a task. The task keeps a reference.
+- No hypothesis or experiment cites a technote: what tests a hypothesis is an
+  experiment. A finding may, in `origin.technotes`, when a technical detail
+  matters in its own right.
 - Citations are identifiers, never titles or paths. A slug is advisory: rewrite
   it freely. It is always English, even when the document is not.
 - Citation flows one way, project to shared base. A finding that graduates
@@ -239,10 +277,10 @@ carries the claim. Refutation resolves the same way, with a negative claim.
 
 ## Identifiers
 
-Hypothesis, experiment, decision and protocol use `<P>-NNNN.xxx`: a type prefix,
-a sequential number, and a random three-character suffix so two branches minting
-`0042` at once do not collide. `H-0003.k3f`, `E-0012.h7q`, `D-0003.m4k`,
-`P-0001.k3f`.
+Hypothesis, experiment, technote, decision and protocol use `<P>-NNNN.xxx`: a
+type prefix, a sequential number, and a random three-character suffix so two
+branches minting `0042` at once do not collide. `H-0003.k3f`, `E-0012.h7q`,
+`T-0002.p4r`, `D-0003.m4k`, `P-0001.k3f`.
 
 Findings use the shared base's own form: 13 characters of Crockford Base32 with
 a check symbol, which omits I, L, O and U and is case-insensitive, so it
@@ -274,25 +312,27 @@ would drift from this one.
 
 ## Operations
 
-Five scripts in `scripts/`, covering the operations a person must not do by
-hand: setting a board up, allocating an identifier, writing a `run:` block, and
-the four checks that are methodological rather than clerical.
+Six scripts in `scripts/`, covering the operations a person must not do by
+hand: setting a board up, upgrading it, allocating an identifier, writing a
+`run:` block, and the four checks that are methodological rather than clerical.
 
 ```
 init.py [--brief PATH] [--lang ru] [--project NAME] [--yes]
 new.py <kind> "<title>" [--slug WORDS] [--status S] [--class C] [--rests-on ID ...] [--under ID ...] [--motivated-by REF] [--lang ru]
-record_run.py "<title>" --input PATH --tool NAME=VERSION --run-id ID [--slug WORDS] [--rests-on ID ...] [--under ID ...] [--date D]
+record_run.py "<title>" [--kind technote] --tool NAME=VERSION --run-id ID [--slug WORDS] [--rests-on ID ...] [--under ID ...] [--date D] [--commit SHA]
 index.py [--check]
 check.py
+upgrade.py [--check]
 ```
 
 `init.py` sets up a board in the current directory, like `git init`, and never
 asks where the project is. It needs a brief (`templates/{en,ru}/brief.md`),
 read as prose: no brief means it stops, which is also what catches an agent
-started in the wrong directory. It writes the five files, refuses to run over an existing board, and asks once
-before setting up outside a git repository. It copies the brief's question and
-out-of-scope sections into `vision.md`, which has only those two, and names on
-the way out the sections the brief does not carry. It is the middle of the
+started in the wrong directory. It writes the five files, refuses to run over
+an existing board, and asks once before setting up outside a git repository.
+It writes nothing at the project root. It copies the brief's question into
+`vision.md`, whose other section, the project's directions, starts empty, and
+names on the way out the sections the brief does not carry. It is the middle of the
 procedure in [`references/initialisation.md`](references/initialisation.md),
 not the whole of it.
 
@@ -300,8 +340,25 @@ not the whole of it.
 mint the same number. The lock is `fcntl.flock` in the temp directory, held for
 milliseconds, which makes it a local-checkout mechanism: over NFS or sshfs it
 is unreliable, and two writers on a network mount can collide. For an
-experiment use `record_run.py`: it reads the commit, hashes the inputs and
-refuses a dirty tree. `check.py` is the gate before a commit.
+experiment or a technote use `record_run.py`: it reads the commit and refuses a
+dirty tree. It hashes no files: the version of the data is the project's to
+pin. Under DVC or a similar tool the lock file is in git, so `run.commit` pins
+the data too; without one, the source and version of the data go in the
+protocol or in the document's text. It runs after the run, so a long run needs
+the order kept by hand. First a trial run on a small slice, on any tree, with
+nothing recorded. Then commit everything the run uses: code, config, the
+measuring script. Unrelated edits may stay uncommitted. Note the SHA. Then the
+full run, then `record_run.py`, with `--commit <SHA>` if HEAD has moved since
+or unrelated edits remain. A commit made after the full run is one the run never
+saw. The commit in `run.commit` is never rebased, squashed or amended.
+`check.py` is the gate before a commit.
+
+`upgrade.py` replaces `conventions.md` with the installed skill's when its
+`template_version` is older, and removes `inputs` from the `run:` block of
+experiments and technotes written by older skills, leaving every other line as
+it was. `check.py` warns when `conventions.md` is behind. It refuses a file with
+uncommitted changes, so `git diff` shows the upgrade. Nothing else in the
+project is the skill's to rewrite.
 
 Which rule each script enforces is stated once, in the project's
 `conventions.md`, next to the moment that fires it.
@@ -320,11 +377,11 @@ and collides with everything.
   checks before anything, the brief interview, what `init.py` leaves, and what
   initialisation must never do. Read when a project is being started, and not
   otherwise
-- `templates/{en,ru}/{hypothesis,experiment,finding,protocol,decision}.md`: the
-  five kinds, in the two shipped languages
-- `templates/{en,ru}/{conventions,vision,AGENTS,config}.md`: what a project
-  gets at initialisation, being the shipped rules, its own purpose, its index
-  and its board settings
+- `templates/{en,ru}/{hypothesis,experiment,technote,finding,protocol,decision}.md`:
+  the six kinds, in the two shipped languages
+- `templates/{en,ru}/{conventions,vision,agents-section,config}.md`: what a
+  project gets at initialisation, being the shipped rules, its own purpose,
+  the section its `AGENTS.md` gets, and its board settings
 - `templates/{en,ru}/brief.md`: the assignment a project starts from, and the
   input initialisation reads. One required section, read as prose and never
   parsed. What a brief omits is the work of whoever takes the project on, and

@@ -10,6 +10,7 @@ updated: 1970-01-01
 origin:
   project: ИМЯ-ПРОЕКТА
   experiments: []
+  technotes: []
   commit: SHA
 # corrects: <id>          # только если заменяет более раннюю находку
 ---

@@ -10,6 +10,7 @@ updated: 1970-01-01
 origin:
   project: PROJECT-NAME
   experiments: []
+  technotes: []
   commit: SHA
 # corrects: <id>          # only when this supersedes an earlier finding
 ---

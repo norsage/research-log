@@ -27,7 +27,8 @@ arithmetic. Compare floats with an explicit tolerance. Use a committed fixture,
 not the real dataset.
 
 A test pinning a computed result detects change. Whether the value is correct
-belongs in an experiment or a finding.
+belongs in a technote, or in an experiment when the value is about the
+project's subject.
 
 `check.py` is the gate before a commit, and `conventions.md` already requires
 it. Run the tools above at that same point, not inside `check.py`: that script

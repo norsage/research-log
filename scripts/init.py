@@ -9,12 +9,13 @@ Runs where it is invoked, like `git init`, and never asks where the project is.
 It asks for one thing instead: a brief. No brief means it stops, which is also
 what catches an agent started in the wrong directory.
 
-Writes AGENTS.md at the project root, and vision.md, conventions.md,
-conventions-local.md and .research-log.md on the board.
-The brief's question and its out-of-scope section are copied into vision.md,
-which has only those two. Nothing else is filled in: a section the brief omits
-is the work of whoever takes the project on, and this script only names those
-gaps on the way out.
+Writes vision.md, conventions.md, conventions-local.md and .research-log.md
+on the board, and nothing at the project root: pointing AGENTS.md or CLAUDE.md
+at the board is left to the agent, from templates/<lang>/agents-section.md.
+The brief's question is copied into vision.md. Nothing else is filled in:
+vision.md's directions section starts empty, and a section the brief omits is
+the work of whoever takes the project on, which this script only names on the
+way out.
 """
 from __future__ import annotations
 
@@ -36,10 +37,8 @@ BRIEF_NAMES = ("brief.md", "BRIEF.md", "docs/brief.md")
 # substrings of the heading text. A brief that omits one leaves vision.md's own
 # template text in place, which is the prompt to write it later.
 COPIED_SECTIONS = {
-    "en": [(("question",), ("question",)),
-           (("does not answer", "out of scope"), ("out of scope",))],
-    "ru": [(("вопрос",), ("вопрос",)),
-           (("не отвеча", "вне рамок"), ("вне рамок",))],
+    "en": [(("question",), ("question",))],
+    "ru": [(("вопрос",), ("вопрос",))],
 }
 
 # Optional sections, by a keyword in their heading. A brief that omits one is
@@ -49,23 +48,13 @@ OPTIONAL_SECTIONS = {
            ("constraints", ("constraint", "limit")),
            ("a hypothesis with a refutation criterion", ("hypothesis",)),
            ("what must be decided before the first computation",
-            ("order of work", "before the first computation")),
-           ("what the project does not answer", ("does not answer", "out of scope"))],
+            ("order of work", "before the first computation"))],
     "ru": [("данные", ("данн",)),
            ("ограничения", ("ограничен",)),
            ("гипотеза с критерием опровержения", ("гипотез",)),
            ("что должно быть решено до первых расчётов",
-            ("порядок работ", "до первых расч")),
-           ("на что проект не отвечает", ("не отвеча", "вне рамок"))],
+            ("порядок работ", "до первых расч"))],
 }
-
-TASK_TRACKER_ROW = {
-    "en": ("| what is being worked on | the task tracker, not this repository's concern |",
-           "| what is being worked on | `docs/tasks/`, via the task-tracker skill |"),
-    "ru": ("| над чем идёт работа | трекер задач, вне этого репозитория |",
-           "| над чем идёт работа | `docs/tasks/`, через скилл task-tracker |"),
-}
-
 
 # --- reading the brief --------------------------------------------------
 
@@ -143,9 +132,8 @@ def replace_section(text: str, keywords, body: str) -> str:
     return "\n".join(out) + "\n"
 
 
-def targets(root: Path, board: Path) -> dict[str, Path]:
+def targets(board: Path) -> dict[str, Path]:
     return {
-        "AGENTS": root / "AGENTS.md",
         "vision": board / "vision.md",
         "conventions": board / "conventions.md",
         "conventions-local": board / "conventions-local.md",
@@ -192,7 +180,7 @@ def main() -> int:
     # Guard one: a board already here. conventions-local.md is the project's
     # own file and the skill never touches it, so re-initialising would be the
     # one way to lose it.
-    existing = [p for p in targets(root, board).values() if p.exists()]
+    existing = [p for p in targets(board).values() if p.exists()]
     existing += [board / d for d, _ in KINDS.values() if (board / d).is_dir()]
     if existing:
         print("a board is already set up here:", file=sys.stderr)
@@ -213,13 +201,6 @@ def main() -> int:
     board.mkdir(parents=True, exist_ok=True)
     written = []
 
-    agents = template(lang, "AGENTS").replace("PROJECT-NAME", project)
-    agents = agents.replace("ИМЯ-ПРОЕКТА", project)
-    if task_tracker_installed(root):
-        old, new = TASK_TRACKER_ROW[lang]
-        agents = agents.replace(old, new)
-    (root / "AGENTS.md").write_text(agents)
-    written.append(root / "AGENTS.md")
 
     vision = template(lang, "vision")
     copied = []
@@ -252,9 +233,10 @@ def main() -> int:
     if not question:
         print("the brief has no question section, so vision.md keeps its template "
               "text. That section is the one a brief has to carry.", file=sys.stderr)
-    if not task_tracker_installed(root):
-        print("no task-tracker install found: AGENTS.md says tasks are kept "
-              "outside this repository.", file=sys.stderr)
+    print(f"add templates/{lang}/agents-section.md to the project's AGENTS.md "
+          f"or CLAUDE.md", file=sys.stderr)
+    if task_tracker_installed(root):
+        print("the task-tracker skill is installed", file=sys.stderr)
 
     headings = " | ".join(h.lower() for h, _ in sections(brief))
     missing = [label for label, keys in OPTIONAL_SECTIONS[lang]

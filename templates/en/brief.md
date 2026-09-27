@@ -11,14 +11,9 @@ lang: en
 the questions, write the answers down, and draft any section on request; only
 what you have accepted goes in.
 
-A brief is what is known before the work starts, and that is usually not much.
-One section is required. The rest is written if there is something to write,
-and added later by the same person.
-
-**What is missing here is the work of whoever takes the project on.** The order
-of work, the limits of applicability and the traps of the method are the
-research itself. A brief that spells them out in advance is either lying or
-leaving nothing to do.
+A brief is what is known before the work starts. Only the question is
+required. The limits of applicability and the traps of the method stay out of
+the brief: finding them is the research.
 
 ## Question
 
@@ -39,7 +34,9 @@ Everything below is optional, and the headings can be renamed or replaced.
 - **Data**: what is given, where it sits, how it was obtained, what has already
   been done to it.
 - **Constraints**: the time frame, how many people, what may and may not be
-  used to compute with, licences, what counts as delivery.
+  used to compute with, licences, what counts as delivery. Also anything the
+  assignment rules out in advance, such as "no licensed software". Exclusions
+  found once the work is under way are recorded as decisions.
 - **Hypothesis**: only if it is a claim that can be refuted, and you are ready
   to name an observable result after which you would call it wrong. A search
   project has no hypothesis; one invented to fill the field is worse than none,
@@ -47,5 +44,3 @@ Everything below is optional, and the headings can be renamed or replaced.
 - **Order of work**: if the sequence matters. Above all, what must be decided
   *before* the first computation, so that the decision cannot be fitted to the
   result.
-- **What the project does not answer**: so that scope creep is visible from the
-  start.

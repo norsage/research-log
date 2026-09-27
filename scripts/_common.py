@@ -6,7 +6,7 @@ kinds of identifier minting.
 
 Two identifier forms, deliberately:
 
-  * Local kinds - hypothesis, experiment, decision, protocol - use
+  * Local kinds - hypothesis, experiment, technote, decision, protocol - use
     `<P>-NNNN.xxx`. The
     number is allocated locally as max+1 so documents created together stay
     adjacent; the random suffix is what keeps two branches that never saw each
@@ -18,7 +18,8 @@ Two identifier forms, deliberately:
     mv` with no citation broken.
 
 The frontmatter parser handles more than task-tracker's because our schema is
-nested: `origin:` is a mapping, and `run.inputs` is a list of mappings. It is
+nested: `origin:` is a mapping, and `run.inputs` in older documents is a list
+of mappings. It is
 still a subset - no anchors, no multi-line scalars, no flow mappings.
 """
 from __future__ import annotations
@@ -37,6 +38,7 @@ CONFIG_NAME = ".research-log.md"
 KINDS = {
     "hypothesis": ("hypotheses", "H"),
     "experiment": ("experiments", "E"),
+    "technote": ("technotes", "T"),
     "decision": ("decisions", "D"),
     "protocol": ("protocols", "P"),
     "finding": ("findings", None),
@@ -114,6 +116,19 @@ def skill_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
+def version_tuple(value) -> tuple[int, ...]:
+    """`0.2.0` as (0, 2, 0); anything unparsable as (), which sorts oldest."""
+    try:
+        return tuple(int(p) for p in str(value).split("."))
+    except ValueError:
+        return ()
+
+
+def template_version(text: str) -> tuple[int, ...]:
+    meta, _ = parse_frontmatter(text)
+    return version_tuple(meta.get("template_version"))
+
+
 def load_config(root: Path, board: str | None = None) -> dict:
     cfg = dict(DEFAULTS)
     path = board_root(root, board) / CONFIG_NAME
@@ -170,8 +185,14 @@ def crockford_check(data: str) -> str:
 
 
 def mint_finding_id() -> str:
-    data = "".join(secrets.choice(CROCKFORD) for _ in range(FINDING_ID_LEN))
-    return data + crockford_check(data)
+    """Redraws until the check symbol is a letter or a digit. Five of the 37 are
+    `*~$=U`: valid Crockford, but `*` in a filename is a shell glob. Ids minted
+    before this still validate."""
+    while True:
+        data = "".join(secrets.choice(CROCKFORD) for _ in range(FINDING_ID_LEN))
+        check = crockford_check(data)
+        if check in CROCKFORD:
+            return data + check
 
 
 def valid_finding_id(value) -> bool:
@@ -409,7 +430,8 @@ _FIELD_ORDER = (
     "id", "title", "type", "audience", "status", "class", "date",
     "created", "updated", "criterion_set",
     "experiments", "origin", "run",
-    "finding", "successor", "corrects", "superseded_by", "motivated_by",
+    "finding", "successor", "corrects", "superseded_by", "based_on",
+    "motivated_by",
 )
 
 

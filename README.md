@@ -38,11 +38,12 @@ Then describe the work. The agent picks the kind, writes it, shows you.
 |---|---|---|---|
 | hypothesis | *"I expect the cheap features to match the full set. Let's test that."* | a claim you are about to test, and what would refute it | before the evidence |
 | experiment | *"Train both feature sets and compare them on the held-out split."* | what one comparison produced | after the run |
+| technote | *"Check our parser against pandas and time both."* | a run that checked the tooling, with its conditions | after the run |
 | finding | *"Summarise what the experiments under that hypothesis add up to."* | a claim that outlives the run behind it | once it holds |
 | protocol | *"Install the tool and write down the manual."* | a procedure that will be repeated | when you work it out |
 | decision | *"We settled on the evaluation process. Let's save the motivation behind it."* | a threshold or a definition, fixed | when it is taken |
 
-Anything that is not one of those five is how the work went, and belongs in
+Anything that is not one of those six is how the work went, and belongs in
 your tracker, whichever one you use. Dates are checked: an experiment cannot
 cite a criterion or a decision younger than itself.
 
@@ -66,7 +67,7 @@ project's own files. See [`presets/README.md`](presets/README.md).
 
 ## Reading further
 
-- [`SKILL.md`](SKILL.md) — the rules the agent follows: the five kinds, the
+- [`SKILL.md`](SKILL.md) — the rules the agent follows: the six kinds, the
   relations between them, what to write when, the frontmatter, and the scripts
 - [`references/initialisation.md`](references/initialisation.md) — the
   interview, in full

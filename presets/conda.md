@@ -69,7 +69,7 @@ Once split:
 - each entry point states the environment it runs in, at the top of the file
   and in `conventions-local.md`;
 - a run that crossed two environments passes `--tool` for both when
-  `record_run.py` writes the experiment;
+  `record_run.py` writes the experiment or the technote;
 - nothing is installed into one environment from another's manifest.
 
 ## Code layout
@@ -121,7 +121,7 @@ Installation traps for each binary go in a protocol.
 - **They want to move an existing project to another package manager.** Once
   numbers are on the board, say what it costs: another solver resolves other
   versions, the old lock is unusable, and runs before and after the move are
-  comparable only through the tool versions each experiment recorded. Update
+  comparable only through the tool versions each run recorded. Update
   the tools table as part of the move.
 - **"It is a pipeline, not a package, so it needs no `pyproject.toml`."**
   Without one, imports resolve through the working directory and a run
