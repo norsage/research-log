@@ -45,6 +45,13 @@ suffix_length: 3
 
 # Zero-padding of the number part.
 id_width: 4
+
+# What a run's result depends on: code, configs, measuring scripts. After a
+# rebase, a squash or an amend, the post-rewrite hook moves a record's commit
+# to its replacement when nothing under these paths changed, and leaves the
+# rest to rebase_runs.py. Empty means every record is asked about. Directories
+# end in /. Under DVC, the stages' code deps are the list.
+run_paths: []
 ---
 
 # Board settings

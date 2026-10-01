@@ -1,5 +1,5 @@
 ---
-template_version: 0.2.0
+template_version: 0.3.0
 ---
 
 # Conventions
@@ -56,8 +56,16 @@ non-English title is refused rather than transliterated.
 
 | Moment | Rule |
 |---|---|
-| a full run is about to start | first a trial run on a small slice: the tree may be dirty, and nothing is recorded. Once it passes, commit everything the run uses: code, config, the measuring script. Unrelated edits may stay uncommitted. Note the SHA. Committing after the run is too late: `commit:` would name code the run did not use, and rerunning is expensive |
-| a run finishes | `record_run.py` writes the experiment, or the technote with `--kind technote`. If HEAD has moved since the run started, or unrelated edits remain in the tree, pass `--commit <SHA before the run>`. Not by hand: a `run:` block typed by a person is a reproducibility claim nobody checked. The commit in `run.commit` is never rewritten: no rebase, squash or amend |
+| a full run is about to start | first a trial run on a small slice: the tree may be dirty, and nothing is recorded. Once it passes, commit everything the run uses: code, config, the measuring script. Unrelated edits may stay uncommitted. Note the SHA. Committing after the run is too late: `commit:` would name code the run did not use, and rerunning is expensive. Just before the full run, rebase the branch onto main; open the merge request as soon as the record is written. Every rebase after a recorded run risks a record whose code changed under it, so rebase it only to merge. A run that needs no code of its own runs on a commit of main, with nothing committed on top: such a record names a commit no rebase can touch, whichever merge request goes in first |
+| a run finishes | `record_run.py` writes the experiment, or the technote with `--kind technote`. If HEAD has moved since the run started, or unrelated edits remain in the tree, pass `--commit <SHA before the run>`. Not by hand: a `run:` block typed by a person is a reproducibility claim nobody checked |
+| a branch is rebased, squashed or amended, here or by the server | with `run_paths` set, the post-rewrite hook has already moved every record whose paths did not change. `rebase_runs.py` lists the rest, experiments, technotes and findings, and shows what changed. `--same --paths <what the run used>` when that code did not change; `--keep` when it did, which tags the old commit: push the tag. Or run again, as a record with `corrects:`. Commit the updated records. Never edit `run.commit` or `origin.commit` by hand |
+| several merge requests are ready at once | merge first those that change nothing under `run_paths`. A code change merged after other people's runs leaves their records intact; merged before, it leaves every record still on a branch naming code main no longer has. A code change several people need goes in first as its own small merge request, and they rebase onto it just before their runs |
+| a rewrite changed code a record names, and an agent is settling it | `--keep` by default: it claims nothing. `--same --basis` only with evidence, written into the basis: the trial run on the small slice gave the same output at both commits (name the command), or the changed files are not among those the run loaded (say how that was established). A reading of the diff is not evidence: show the diff to the user and let them decide. Pushing a tag or a rewritten branch is the user's to approve |
+| a record whose code changed is run again | same numbers: no new record; `rebase_runs.py <id> --same --basis "full rerun at <sha> reproduced the numbers: <which numbers, old → new>, <command>"`. Different numbers: a new record with `corrects:`, and review what cites the old one. A corrected record's commit is no longer checked; its tag stays until someone deletes it |
+| a run or a finding has to be reproduced | check out the commit it names beside the working tree, not in it: `git worktree add ../repro-<id> $(grep -m1 '^  commit:' docs/*/<id>-*.md | awk '{print $2}')`. The commit is in the record's frontmatter, never in where the record sits in `git log`: a record merged after other code still names the code it ran on. `git worktree remove ../repro-<id>` when done |
+| a commit has to be kept past a rewrite | the tag is `research-log/<id>`, made by `rebase_runs.py --keep` and by nothing else. The project's own tags stay out of `research-log/` |
+| the paths a run's result depends on become clear | list them in `run_paths` in `.research-log.md` |
+| a clone is made | `rebase_runs.py --install-hooks`, once. The post-rewrite hook records what replaced what; the pre-push hook refuses a push that leaves a record behind |
 | a run reads data | the project pins its version, not the log. Under DVC or a similar tool the lock file is in git and `run.commit` pins the data with the code. Without one, the source and version of the data go in the protocol or in the document's text. `record_run.py` hashes no files |
 | it is unclear whether a run is an experiment | write an experiment. If the same doubt comes back, ask the user once and record the class of runs in `conventions-local.md` |
 | a hypothesis is taken up | status to `active`, write *What would refute it*, set `criterion_set`, in that order, before the first run |
@@ -79,6 +87,8 @@ non-English title is refused rather than transliterated.
 | A run on a dirty working tree is refused; in the log directory only `.md` files are exempt | `record_run.py` |
 | `--commit` accepts only a commit that exists | `record_run.py` |
 | `date:` is the earliest run's date, not the writing date | `record_run.py` |
+| Every `run.commit`, and `origin.commit` of a finding minted here, is on HEAD or held by the record's tag | `check.py`, the pre-push hook |
+| `--same --paths` moves `run.commit` only when those paths are unchanged | `rebase_runs.py` |
 | A hypothesis in `idea` cites no experiments | `check.py` |
 | Every cited experiment postdates `criterion_set` | `check.py` |
 | Every decision an experiment rests on predates the run | `check.py` |

@@ -28,7 +28,7 @@ python3 "$KT/new.py" decision "Use the fast parser" --rests-on "$T"
 python3 "$KT/index.py"
 python3 "$KT/check.py"
 
-python3 "$KT/check.py" | grep -q "0 errors, 0 warning" \
+python3 "$KT/check.py" | tee /dev/stderr | grep -q "0 errors, 0 warning" \
     || { echo "check.py warned on a fresh board" >&2; exit 1; }
 
 # A document written by an older skill, with run.inputs, passes check.py;
@@ -65,6 +65,99 @@ if python3 "$KT/check.py" --quiet >/dev/null; then
     echo "check.py accepted a hypothesis citing a technote" >&2
     exit 1
 fi
+
+# A rebase that moves a run's commit: check.py refuses the record,
+# rebase_runs.py follows it (through the hook, or by patch when no hook ran),
+# --paths refuses when the code the run used changed, --keep tags it, and the
+# pre-push hook refuses a push that leaves a record behind.
+mkdir "$WORK/rb" && cd "$WORK/rb"
+git init -q -b main .
+git config user.email smoke@test
+git config user.name "Smoke Test"
+echo 'v=1' > model.py; echo readme > README.md
+mkdir -p docs/experiments && touch docs/experiments/.keep
+git add -A && git commit -qm init
+git init -q --bare "$WORK/rb-remote.git"
+git remote add origin "$WORK/rb-remote.git" && git push -q origin main
+python3 "$KT/rebase_runs.py" --install-hooks >/dev/null
+git checkout -qb feat
+echo 'v=2' > model.py && git commit -qam "model v2"
+E=$(python3 "$KT/record_run.py" "Run one" | head -1)
+git add -A && git commit -qm "record $E"
+git checkout -q main && echo more >> README.md && git commit -qam "main moves"
+git checkout -q feat && git rebase -q main 2>/dev/null
+if python3 "$KT/check.py" --quiet >/dev/null; then
+    echo "check.py accepted a run.commit left behind by a rebase" >&2; exit 1
+fi
+if git push -q origin feat 2>/dev/null; then
+    echo "pre-push let a record left behind through" >&2; exit 1
+fi
+OUT=$(python3 "$KT/rebase_runs.py" || true)
+grep -q "recorded by the post-rewrite hook" <<<"$OUT" \
+    || { echo "rebase_runs.py did not use the hook's record" >&2; exit 1; }
+python3 "$KT/rebase_runs.py" "$E" --same --paths model.py >/dev/null
+grep -q "basis: no changes under model.py" docs/experiments/$E-*.md \
+    || { echo "rebase_runs.py wrote no run.rebased" >&2; exit 1; }
+git commit -qam "follow the rebase"
+python3 "$KT/check.py" --quiet >/dev/null \
+    || { echo "check.py refused a record rebase_runs.py settled" >&2; exit 1; }
+git push -q origin feat
+
+echo 'v=3' > model.py && git commit -qam "model v3"
+E2=$(python3 "$KT/record_run.py" "Run two" | head -1)
+git add -A && git commit -qm "record $E2"
+git checkout -q main && echo again >> README.md && git commit -qam "main again"
+git checkout -q feat && git -c core.hooksPath=/dev/null rebase -q main 2>/dev/null
+OUT=$(python3 "$KT/rebase_runs.py" || true)
+grep -q "same patch on HEAD" <<<"$OUT" \
+    || { echo "rebase_runs.py did not find a hookless rebase by patch" >&2; exit 1; }
+python3 "$KT/rebase_runs.py" "$E" --same --paths model.py >/dev/null
+echo 'v=4' > model.py && git commit -qam "model v4"
+if python3 "$KT/rebase_runs.py" "$E2" --same --to HEAD --paths model.py >/dev/null; then
+    echo "rebase_runs.py --paths accepted changed code" >&2; exit 1
+fi
+python3 "$KT/rebase_runs.py" "$E2" --keep >/dev/null
+git rev-parse -q --verify "refs/tags/research-log/$E2" >/dev/null \
+    || { echo "--keep did not make the research-log/<id> tag" >&2; exit 1; }
+python3 "$KT/check.py" --quiet >/dev/null \
+    || { echo "check.py refused a record held by its tag" >&2; exit 1; }
+
+# With run_paths, the hook moves a run and a finding by itself when the rebase
+# leaves those paths alone.
+printf -- '---\nproject: rb\nrun_paths: [model.py]\n---\n' > docs/.research-log.md
+git add -A && git commit -qm "run_paths"
+E3=$(python3 "$KT/record_run.py" "Run three" | head -1)
+python3 "$KT/new.py" finding "Model five holds" --rests-on "$E3" >/dev/null
+git add -A && git commit -qm "record $E3 and a finding"
+git checkout -q main && echo third >> README.md && git commit -qam "main third"
+git checkout -q feat && git rebase -q main 2>/dev/null
+grep -q "basis: no changes under model.py" docs/experiments/$E3-*.md \
+    || { echo "the hook did not move a run under run_paths" >&2; exit 1; }
+grep -q "basis: no changes under model.py" docs/findings/*.md \
+    || { echo "the hook did not move a finding's origin.commit" >&2; exit 1; }
+git commit -qam "follow"
+python3 "$KT/check.py" --quiet >/dev/null \
+    || { echo "check.py refused records the hook moved" >&2; exit 1; }
+
+# A record whose code changed and that was run again with different numbers:
+# the new record corrects it, and the old one is no longer checked or warned on.
+E4=$(python3 "$KT/record_run.py" "Run four" | head -1)
+git add -A && git commit -qm "record $E4"
+git checkout -q main && echo 'v=9' > model.py && git commit -qam "main changes the model"
+git checkout -q feat && git rebase -q -X ours main 2>/dev/null
+if python3 "$KT/check.py" --quiet >/dev/null; then
+    echo "check.py accepted a record whose code changed under it" >&2; exit 1
+fi
+E5=$(python3 "$KT/record_run.py" "Run four again" | head -1)
+sed -i.bak -e "s/^# corrects: .*/corrects: $E4/" docs/experiments/$E5-*.md
+rm docs/experiments/$E5-*.md.bak
+python3 "$KT/rebase_runs.py" --all --keep >/dev/null  # the earlier ones, not the corrected
+if git rev-parse -q --verify "refs/tags/research-log/$E4" >/dev/null; then
+    echo "rebase_runs.py --all tagged a corrected record" >&2; exit 1
+fi
+python3 "$KT/check.py" | grep -q "0 errors, 0 warning" \
+    || { echo "check.py still reports a corrected record" >&2; exit 1; }
+cd "$WORK"
 
 # Neither init.py nor upgrade.py touches the project's AGENTS.md, and
 # upgrade.py brings an older conventions.md up to date.

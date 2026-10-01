@@ -28,6 +28,7 @@ import fcntl
 import os
 import re
 import secrets
+import subprocess
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
@@ -78,6 +79,7 @@ DEFAULTS = {
     "id_width": 4,
     "lang": "en",
     "project": "",
+    "run_paths": [],
 }
 _INT_LIMITS = {"suffix_length": (0, 8), "id_width": (1, 8)}
 
@@ -146,6 +148,9 @@ def load_config(root: Path, board: str | None = None) -> dict:
                     raise ValueError(f"{path}: {key} must be an integer, got {value!r}")
                 if not lo <= value <= hi:
                     raise ValueError(f"{path}: {key} must be in {lo}..{hi}, got {value}")
+            if key == "run_paths" and not (isinstance(value, list) and all(
+                    isinstance(v, str) and v.strip() for v in value)):
+                raise ValueError(f"{path}: run_paths must be a list of paths, got {value!r}")
             if key == "lang" and value not in LANGS:
                 raise ValueError(f"{path}: lang must be one of {LANGS}, got {value!r}")
             cfg[key] = value
@@ -657,6 +662,69 @@ def as_date(v):
 
 def today() -> str:
     return date.today().isoformat()
+
+
+# --- git ----------------------------------------------------------------
+
+def git(root: Path, *args: str, stdin: str | None = None) -> tuple[int, str]:
+    try:
+        out = subprocess.run(["git", "-C", str(root), *args], input=stdin,
+                             capture_output=True, text=True, timeout=60)
+        return out.returncode, out.stdout.strip()
+    except Exception:
+        return 1, ""
+
+
+TAG_PREFIX = "research-log/"
+
+
+def keep_tag(kind: str, doc_id: str) -> str:
+    """The tag that keeps a record's commit alive past a rewrite of its branch.
+
+    One namespace for every kind, so one pattern protects and lists them all
+    and none collides with the project's own tags; the id says the kind. A
+    finding's tag drops the check symbol: it may be `*` or `~`, which no ref
+    name may carry, and the thirteen data symbols are unique without it.
+    """
+    if kind == "finding":
+        doc_id = str(doc_id)[:FINDING_ID_LEN]
+    return f"refs/tags/{TAG_PREFIX}{doc_id}"
+
+
+def commit_state(root: Path, tag: str, commit: str) -> str:
+    """Where a record's commit stands against HEAD.
+
+    `ok`: an ancestor of HEAD, which is where it is when nothing rewrote the
+    branch - the record is committed after the code it names. `tagged`: not an
+    ancestor, but `tag` holds it. `rewritten`: in the object store and held by
+    nothing; rebase_runs.py's to follow. `missing`: not in this repository at
+    all - collected after a rewrite, or never fetched. `unknown`: no git, no
+    HEAD, or a shallow clone, where the question cannot be answered.
+    """
+    code, head = git(root, "rev-parse", "--verify", "-q", "HEAD")
+    if code != 0 or not head:
+        return "unknown"
+    if git(root, "rev-parse", "--is-shallow-repository")[1] == "true":
+        return "unknown"
+    code, full = git(root, "rev-parse", "--verify", "-q", f"{commit}^{{commit}}")
+    if code != 0:
+        return "missing"
+    if git(root, "merge-base", "--is-ancestor", full, head)[0] == 0:
+        return "ok"
+    code, tagged = git(root, "rev-parse", "--verify", "-q", f"{tag}^{{commit}}")
+    if code == 0 and tagged == full:
+        return "tagged"
+    return "rewritten"
+
+
+def commit_block(kind: str) -> str:
+    """The frontmatter mapping that carries a record's commit."""
+    return "origin" if kind == "finding" else "run"
+
+
+def local_project(root: Path, cfg: dict) -> str:
+    """The name findings minted here carry in `origin.project`, as new.py stamps it."""
+    return cfg.get("project") or root.name
 
 
 # --- locking ------------------------------------------------------------

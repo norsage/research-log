@@ -108,9 +108,9 @@ Shared by every kind: `id`, `title`, `type`, `audience`, `created`/`date`.
 | Kind | Adds |
 |---|---|
 | hypothesis | `status` (`idea` \| `active` \| `hold` \| `resolved` \| `recycled`), `criterion_set`, `experiments`, optional `finding`, `successor` |
-| experiment | `date` (the earliest run's date), `run:` with `tracker`, `ids`, `commit`, `dirty` (only when `true`), `tools`; optional `rests_on`, `under`, `motivated_by`, `corrects` |
+| experiment | `date` (the earliest run's date), `run:` with `tracker`, `ids`, `commit`, `dirty` (only when `true`), `tools`, `rebased` (only after a rewrite); optional `rests_on`, `under`, `motivated_by`, `corrects` |
 | technote | as experiment, without `rests_on` |
-| finding | `status`, `class`, `origin:` with `project`, `experiments`, `technotes`, `commit`; optional `corrects` |
+| finding | `status`, `class`, `origin:` with `project`, `experiments`, `technotes`, `commit`, `rebased` (only after a rewrite); optional `corrects` |
 | protocol | `status` (`draft` \| `stable` \| `deprecated`) |
 | decision | `status` (`accepted` \| `superseded`), optional `superseded_by`, `based_on` |
 
@@ -312,9 +312,10 @@ would drift from this one.
 
 ## Operations
 
-Six scripts in `scripts/`, covering the operations a person must not do by
+Seven scripts in `scripts/`, covering the operations a person must not do by
 hand: setting a board up, upgrading it, allocating an identifier, writing a
-`run:` block, and the four checks that are methodological rather than clerical.
+`run:` block, following it across a rewrite of history, and the four checks
+that are methodological rather than clerical.
 
 ```
 init.py [--brief PATH] [--lang ru] [--project NAME] [--yes]
@@ -322,6 +323,8 @@ new.py <kind> "<title>" [--slug WORDS] [--status S] [--class C] [--rests-on ID .
 record_run.py "<title>" [--kind technote] --tool NAME=VERSION --run-id ID [--slug WORDS] [--rests-on ID ...] [--under ID ...] [--date D] [--commit SHA]
 index.py [--check]
 check.py
+rebase_runs.py [ID ... | --all] [--same --paths PATH ... | --same --basis TEXT | --keep] [--to SHA]
+rebase_runs.py --check | --install-hooks
 upgrade.py [--check]
 ```
 
@@ -350,8 +353,24 @@ nothing recorded. Then commit everything the run uses: code, config, the
 measuring script. Unrelated edits may stay uncommitted. Note the SHA. Then the
 full run, then `record_run.py`, with `--commit <SHA>` if HEAD has moved since
 or unrelated edits remain. A commit made after the full run is one the run never
-saw. The commit in `run.commit` is never rebased, squashed or amended.
-`check.py` is the gate before a commit.
+saw. `check.py` is the gate before a commit.
+
+`run.commit`, and `origin.commit` of a finding minted here, must stay on HEAD
+or be held by the record's tag (`research-log/<id>`), and `check.py`
+refuses a record where it is neither. A rebase, a squash or an amend replaces
+the commit, which is ordinary when several people work against one main, and
+`rebase_runs.py` follows it. It finds the replacement through the post-rewrite
+hook, or by patch when the server did the rebase, and shows what differs.
+`--same --paths <what the run used>` moves the commit when those paths did not
+change, and records the old SHA and the reason in `rebased` beside it;
+`--basis` states the reason in words where no list of paths says it. With
+`run_paths` in the board config, that list is the default, and the hook moves
+every record it clears without being asked. `--keep` tags the old commit
+instead, for when the code did change. The third way out is a new run with
+`corrects:`. `rebase_runs.py --install-hooks` once per clone adds the
+post-rewrite hook and a pre-push hook that refuses a push leaving a record
+behind. What the hosting has to be set to, so that it does not rewrite a
+branch unseen, is [`references/git-hosting.md`](references/git-hosting.md).
 
 `upgrade.py` replaces `conventions.md` with the installed skill's when its
 `template_version` is older, and removes `inputs` from the `run:` block of
@@ -365,7 +384,7 @@ Which rule each script enforces is stated once, in the project's
 
 Board settings live in `<board>/.research-log.md`, at the board root
 beside the kind directories rather than inside one: `lang`, `project`,
-`id_width`, `suffix_length`. The board is `docs/` unless `--board` or
+`id_width`, `suffix_length`, `run_paths`. The board is `docs/` unless `--board` or
 `RESEARCH_LOG_BOARD` says otherwise. `id_width` is per board, sized from
 the table in `templates/<lang>/config.md`; it is committed and must be the same
 for every writer, because a width changed under one writer renumbers nothing
@@ -377,6 +396,10 @@ and collides with everything.
   checks before anything, the brief interview, what `init.py` leaves, and what
   initialisation must never do. Read when a project is being started, and not
   otherwise
+- `references/git-hosting.md`: hosting settings that keep the server from
+  rewriting a record's commit unseen, what to do after a rebase in the merge
+  request, and a CI job running `check.py`. Read when the project merges
+  through merge requests or pull requests
 - `templates/{en,ru}/{hypothesis,experiment,technote,finding,protocol,decision}.md`:
   the six kinds, in the two shipped languages
 - `templates/{en,ru}/{conventions,vision,agents-section,config}.md`: what a

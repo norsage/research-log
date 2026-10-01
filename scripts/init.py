@@ -235,6 +235,7 @@ def main() -> int:
               "text. That section is the one a brief has to carry.", file=sys.stderr)
     print(f"add templates/{lang}/agents-section.md to the project's AGENTS.md "
           f"or CLAUDE.md", file=sys.stderr)
+    print("run rebase_runs.py --install-hooks once in every clone", file=sys.stderr)
     if task_tracker_installed(root):
         print("the task-tracker skill is installed", file=sys.stderr)
 

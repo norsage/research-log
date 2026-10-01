@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
-# Install the research-log skill into ~/.claude/skills/ (global) or
-# ./.claude/skills/ (project-local).
+# Install the research-log skill into ~/.agents/skills/ (global) or
+# ./.agents/skills/ (project-local), linked from .claude/skills/ beside it.
 #
 # Usage:
 #   bash install.sh                  # global, copy (default)
-#   bash install.sh --project        # project-local, into $(pwd)/.claude/skills/
+#   bash install.sh --project        # project-local, into $(pwd)/.agents/skills/
 #   bash install.sh --symlink        # symlink instead of copy (skill devs)
 #   bash install.sh --global --symlink
 #
 # Re-running is idempotent: existing installs are replaced after a prompt.
+#
+# .agents/skills/ is read by Codex, OpenCode, Cursor, Copilot and Gemini CLI;
+# Claude Code reads only .claude/skills/, so it gets a relative symlink to the
+# skill. Tools that read both directories see the skill twice.
 
 set -euo pipefail
 
@@ -30,7 +34,7 @@ while [ $# -gt 0 ]; do
         --symlink) MODE="symlink"; shift ;;
         --copy)    MODE="copy"; shift ;;
         -h|--help)
-            sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *)
@@ -41,16 +45,21 @@ while [ $# -gt 0 ]; do
 done
 
 if [ "$SCOPE" = "global" ]; then
-    TARGET_PARENT="$HOME/.claude/skills"
+    BASE="$HOME"
 else
-    TARGET_PARENT="$(pwd)/.claude/skills"
+    BASE="$(pwd)"
 fi
-TARGET="$TARGET_PARENT/$SKILL_NAME"
+TARGET="$BASE/.agents/skills/$SKILL_NAME"
+LINK="$BASE/.claude/skills/$SKILL_NAME"
 
-mkdir -p "$TARGET_PARENT"
+mkdir -p "$(dirname "$TARGET")" "$(dirname "$LINK")"
 
-if [ -e "$TARGET" ] || [ -L "$TARGET" ]; then
-    echo "existing install at $TARGET will be replaced"
+existing=""
+for p in "$TARGET" "$LINK"; do
+    if [ -e "$p" ] || [ -L "$p" ]; then existing="$existing $p"; fi
+done
+if [ -n "$existing" ]; then
+    echo "existing install will be replaced:$existing"
     if [ -t 0 ]; then
         printf "continue? [y/N] "
         read -r ans
@@ -59,7 +68,7 @@ if [ -e "$TARGET" ] || [ -L "$TARGET" ]; then
             *) echo "aborted."; exit 1 ;;
         esac
     fi
-    rm -rf "$TARGET"
+    rm -rf "$TARGET" "$LINK"
 fi
 
 if [ "$MODE" = "symlink" ]; then
@@ -91,6 +100,9 @@ else
     echo "installed $SKILL_NAME to $TARGET"
 fi
 
+ln -s "../../.agents/skills/$SKILL_NAME" "$LINK"
+echo "linked $LINK -> ../../.agents/skills/$SKILL_NAME (Claude Code)"
+
 if [ "$SCOPE" = "project" ]; then
-    echo "(project-local; commit .claude/skills/$SKILL_NAME to share with the team)"
+    echo "(project-local; commit .agents/skills/$SKILL_NAME and .claude/skills/$SKILL_NAME to share with the team)"
 fi

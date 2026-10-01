@@ -20,7 +20,8 @@ Three things here are not conveniences:
     commit made after the full run is one the run never saw. Unrelated edits
     may stay uncommitted. If they remain, or HEAD has moved since, `--commit
     SHA` names the commit the run used, and the tree is not checked.
-    The commit in `run.commit` is never rebased, squashed or amended.
+    A later rebase, squash or amend of that commit is followed by
+    rebase_runs.py, never by editing `run:` by hand.
 
   * **`date:` is the run's date, not today's.** The check that a hypothesis'
     refutation criterion predates its evidence compares against this field, so
@@ -48,25 +49,15 @@ run is, it is an experiment.
 from __future__ import annotations
 
 import argparse
-import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (  # noqa: E402
-    LANGS, allocate_id, board_lock, board_root, find_root, kind_dir,
+    LANGS, allocate_id, board_lock, board_root, find_root, git, kind_dir,
     NeedSlug, load_config, replace_block, set_field, skill_root, slugify, today,
     uncomment_field,
 )
-
-
-def git(root: Path, *args: str) -> tuple[int, str]:
-    try:
-        out = subprocess.run(["git", "-C", str(root), *args],
-                             capture_output=True, text=True, timeout=30)
-        return out.returncode, out.stdout.strip()
-    except Exception:
-        return 1, ""
 
 
 def dirty_paths(porcelain: str, board: Path, root: Path) -> list[str]:

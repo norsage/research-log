@@ -426,6 +426,86 @@ and which version it was.
 Not taken: reading `dvc.lock` into `run:`. It is worth doing once a project
 actually uses DVC, and not before.
 
+### 2.8 A rewritten commit is followed, not forbidden
+
+Reversed 2026-09-30. `run.commit` used to be a commit that was "never rebased,
+squashed or amended". With several people merging into one main, that rule
+could not be kept: a merge request goes in after a rebase, and a rebase
+replaces every commit on the branch. The old commits are collected once no
+branch holds them, and the record then names code that no longer exists.
+
+Looked at and not taken:
+
+- **A tag on every run.** It keeps every run's commit alive, and fills the
+  repository with tags on commits no branch reaches. Kept only for the rare
+  run whose code a rewrite did change (`--keep`).
+- **Merge commits, never rebase.** It keeps the SHAs, costs a merge commit per
+  merge request, and asks everyone to keep a discipline nothing checks. DVC's
+  own advice for experiments whose baseline was amended comes to this: do not
+  amend, or run again.
+- **A copy of the code beside the record**, as W&B keeps `diff.patch`. It
+  survives any rewrite, and is a second store of code running alongside git.
+- **Rewriting the SHA silently.** The rebased commit carries main's changes,
+  which the run never saw. Moving the SHA is a claim that none of those
+  changes touch what the run used, and a claim nobody checked is what the
+  `run:` block exists to avoid.
+
+What was taken is the last one with the check added. `git diff <old> <new>`
+is exactly what a rewrite changed in the code, so `--same --paths` moves the
+SHA only when the paths the run used do not differ, and `run.rebased` keeps
+the old SHA, the date and the basis. The old SHA may name a commit that is
+gone; it is still where the run was, and once pushed GitLab keeps it in the
+merge request's versions longer than any clone does. GitHub keeps only a pull
+request's latest head. `--basis` exists because no list of paths is complete
+for every project. A person saying why is weaker than a diff, and is written
+down.
+
+The replacement is found by the post-rewrite hook, which git hands `old new`
+pairs, and by patch-id when the rewrite happened on the server and no hook ran.
+The hooks are per clone, so the invariant is also in `check.py`, where CI
+enforces it. What neither can see is a squash at merge time on the server,
+after the last pipeline, which is why `references/git-hosting.md` turns squash
+off, and on GitHub rebase merging as well: its rebase merge makes new SHAs
+even where a fast-forward would do.
+
+`run_paths` in the board config makes the check the hook's to run. A
+rebase onto a main that moved elsewhere then costs nothing: the hook moves the
+records whose paths did not change and names the others. One list for the
+whole board is coarser than a list per run, and errs the safe way: a path
+that only some runs used makes more records wait for a person, never fewer.
+
+`origin.commit` of a finding breaks the same way and is followed the same way,
+but only for a finding minted here: one that came from another project names a
+commit of that project. Its tag carries the thirteen data symbols only,
+because a check symbol may be `*` or `~`, which no ref name may carry.
+
+When a path did change, an agent settles it with `--keep` unless it has
+evidence: the slice run giving the same output at both commits, or the changed
+files shown to lie outside what the run loaded. Reading the diff and judging it
+harmless is the user's call, because that is exactly the unchecked claim the
+field exists to avoid.
+
+A rerun settles a record two ways. Same numbers: the rerun is the evidence,
+`--same --basis` names it, and nothing new is written. Different numbers: a new
+record that `corrects:` the old, which is then superseded and no longer
+checked. It used to be a warning; a warning that never goes away teaches
+people to stop reading warnings. Its tag stays: deleting the code of a past
+result is a person's decision, not a cleanup.
+
+The tags share one namespace, `research-log/<id>`, rather than one per kind.
+One pattern protects and lists them, the project's own tags cannot collide
+with them, and the id already says the kind.
+
+Not taken: comparing the Python AST of the two commits. It clears comments,
+docstrings and formatting, and nothing else; a new key in a dict, the change a
+rebase most often brings, still differs, so it would rarely decide anything.
+Not taken either: a list of paths per record. It is precise, and one more
+field to fill on every run for a gain the board-wide list mostly gives.
+
+Not taken, for now: reading `dvc.lock` to supply `run_paths`. A stage's `deps`
+are exactly the list wanted, but keeping two copies of it in step is a job
+nobody has needed yet.
+
 ## 3. The files a project gets
 
 ### 3.1 The watershed: who owns a document's shape
@@ -817,6 +897,18 @@ held the draft brief for approval, ran `init.py`, minted the decision, and
 closed with `check.py` and a commit. It also volunteered which sentences were
 its own rather than the researcher's, twice, unprompted — which is the
 forbidden list doing its work.
+
+Reversed on 2026-10-01: the skill installs into `.agents/skills/` and
+`.claude/skills/<name>` is a relative symlink to it, globally and per project.
+A project install is committed and shared, so one directory has to serve every
+collaborator's agent. Checked that day: Claude Code 2.1.257 reads only
+`.claude/skills/`; Codex 0.151 reads `.agents/skills/` and `.codex/skills/` and
+not `.claude/skills/`, through `skills/list` of its app server. Codex, OpenCode,
+Cursor, Copilot and Gemini CLI share `.agents/skills/`, and `npx skills` uses
+the same layout. The cost: opencode follows the symlink without
+deduplicating and warns of a duplicate skill name on every workspace
+(anomalyco/opencode#46327); no layout avoids it while both Claude Code and
+Codex see the skill.
 
 That a small local model follows the file is the evidence that matters. The
 protocol is procedure, and it does not need a large model to hold.

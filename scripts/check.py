@@ -25,6 +25,13 @@ reason this script exists at all:
     protocol written after the run is a procedure reconstructed from the
     result.
 
+A record's commit must still be there. `run.commit`, and `origin.commit` of a
+finding minted here, is an ancestor of HEAD or held by the record's tag: a
+rebase, a squash or an amend that replaced it leaves the record naming code
+nothing keeps, and rebase_runs.py is what follows it. A record another one
+`corrects` is not checked: it is superseded. A shallow clone cannot answer this
+and is told so.
+
 One more keeps two kinds apart. A technote records a run that checked the
 project's tooling, and no hypothesis or experiment may cite it: what tests a
 hypothesis is an experiment. A finding names technotes in `origin.technotes`,
@@ -47,8 +54,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (  # noqa: E402
     AUDIENCES, DECISION_STATUSES, FINDING_CLASSES, FINDING_STATUSES,
     HYPOTHESIS_STATUSES, KINDS, PROTOCOL_STATUSES,
-    as_date, board_root, find_root, iter_docs, load_config, parse_local_id,
-    skill_root, template_version, valid_finding_id,
+    as_date, board_root, commit_block, commit_state, find_root, git, iter_docs,
+    keep_tag, load_config, local_project, parse_local_id, skill_root,
+    template_version, valid_finding_id,
 )
 
 STATUS_VOCAB = {
@@ -125,6 +133,14 @@ def run_checks(root: Path, board: str | None) -> Report:
     def resolves(ref) -> bool:
         return str(ref) in by_id
 
+    corrected = {str(meta["corrects"]) for items in docs.values()
+                 for _, meta, _ in items if meta.get("corrects")}
+    try:
+        project = local_project(root, load_config(root, board))
+    except ValueError as exc:
+        rep.errors.append(str(exc))
+        project = root.name
+
     for kind, items in docs.items():
         for path, meta, _ in items:
             for field in REQUIRED[kind]:
@@ -170,15 +186,50 @@ def run_checks(root: Path, board: str | None) -> Report:
                 _check_hypothesis(rep, path, meta, by_id, resolves)
             elif kind in ("experiment", "technote"):
                 _check_run(rep, path, meta, by_id, resolves, kind)
+                _check_commit(rep, root, kind, path, meta, doc_id in corrected)
             elif kind == "finding":
                 _check_finding(rep, path, meta, by_id, resolves)
+                origin = meta.get("origin")
+                # A finding from another project names a commit of that project.
+                if isinstance(origin, dict) and str(origin.get("project") or "") == project:
+                    _check_commit(rep, root, kind, path, meta, doc_id in corrected)
             elif kind == "decision":
                 if status == "superseded" and not meta.get("superseded_by"):
                     rep.error(path, "status is superseded but superseded_by is empty")
                 _check_decision(rep, path, meta, by_id, resolves)
 
     _check_conventions_version(rep, root, board)
+    if git(root, "rev-parse", "--is-shallow-repository")[1] == "true":
+        rep.warnings.append("shallow clone: whether each run.commit is still on "
+                            "HEAD was not checked. In CI, set GIT_DEPTH: 0")
     return rep
+
+
+def _check_commit(rep, root, kind, path, meta, corrected) -> None:
+    """The record's commit is on HEAD or under its tag, or a rewrite left it behind."""
+    key = commit_block(kind)
+    block = meta.get(key)
+    if not isinstance(block, dict) or not block.get("commit") or not meta.get("id"):
+        return
+    for item in as_list(rep, path, f"{key}.rebased", block.get("rebased")):
+        if not isinstance(item, dict) or not all(item.get(k) for k in ("from", "date", "basis")):
+            rep.error(path, f"{key}.rebased: each entry needs from, date and basis")
+            break
+    if corrected:
+        return  # superseded: its numbers are history, and so is its commit
+    tag = keep_tag(kind, str(meta["id"]))
+    commit = str(block["commit"])
+    state = commit_state(root, tag, commit)
+    if state == "rewritten":
+        msg = (f"{key}.commit {commit[:10]} is not on HEAD and no "
+               f"{tag.removeprefix('refs/tags/')} tag holds it - a rebase, squash "
+               "or amend left it behind. Run rebase_runs.py")
+    elif state == "missing":
+        msg = (f"{key}.commit {commit[:10]} is not in this repository - "
+               "collected after a rewrite, or a tag not fetched. Run rebase_runs.py")
+    else:
+        return
+    rep.error(path, msg)
 
 
 def _check_conventions_version(rep, root, board) -> None:
