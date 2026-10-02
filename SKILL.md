@@ -369,7 +369,8 @@ every record it clears without being asked. `--keep` tags the old commit
 instead, for when the code did change. The third way out is a new run with
 `corrects:`. `rebase_runs.py --install-hooks` once per clone adds the
 post-rewrite hook and a pre-push hook that refuses a push leaving a record
-behind. What the hosting has to be set to, so that it does not rewrite a
+behind. Git does not copy hooks, so `check.py` warns in a clone that lacks
+either one, naming the command, except where `CI` is set. What the hosting has to be set to, so that it does not rewrite a
 branch unseen, is [`references/git-hosting.md`](references/git-hosting.md).
 
 `upgrade.py` replaces `conventions.md` with the installed skill's when its

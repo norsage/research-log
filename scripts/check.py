@@ -32,6 +32,11 @@ nothing keeps, and rebase_runs.py is what follows it. A record another one
 `corrects` is not checked: it is superseded. A shallow clone cannot answer this
 and is told so.
 
+The clone's hooks are looked for too. Git does not copy them, so every clone
+needs `rebase_runs.py --install-hooks` once; without them an amend or a local
+rebase moves no record and nothing stops the push. That is a warning, and it is
+not given in CI (`CI` set), whose clones have no hooks by design.
+
 One more keeps two kinds apart. A technote records a run that checked the
 project's tooling, and no hypothesis or experiment may cite it: what tests a
 hypothesis is an experiment. A finding names technotes in `origin.technotes`,
@@ -47,6 +52,8 @@ evidence.
 from __future__ import annotations
 
 import argparse
+import os
+import shlex
 import sys
 from pathlib import Path
 
@@ -202,7 +209,34 @@ def run_checks(root: Path, board: str | None) -> Report:
     if git(root, "rev-parse", "--is-shallow-repository")[1] == "true":
         rep.warnings.append("shallow clone: whether each run.commit is still on "
                             "HEAD was not checked. In CI, set GIT_DEPTH: 0")
+    _check_hooks(rep, root, board)
     return rep
+
+
+def _check_hooks(rep, root, board) -> None:
+    """Warn when this clone lacks the hooks rebase_runs.py --install-hooks adds."""
+    if "CI" in os.environ:
+        return
+    code, rel = git(root, "rev-parse", "--git-path", "hooks")
+    if code or not rel:
+        return  # not a git repository
+    hooks = Path(rel) if Path(rel).is_absolute() else root / rel
+    # Match the script, not the hook's marker: beside another hook,
+    # --install-hooks only prints the line to add, and that line has no marker.
+    missing = [name for name in ("post-rewrite", "pre-push")
+               if not (hooks / name).is_file()
+               or "rebase_runs.py" not in (hooks / name).read_text(errors="replace")]
+    if not missing:
+        return
+    script = Path(__file__).resolve().parent / "rebase_runs.py"
+    if script.is_relative_to(root):
+        script = script.relative_to(root)
+    cmd = f"python3 {shlex.quote(str(script))}"
+    if board is not None:
+        cmd += f" --board {shlex.quote(board)}"
+    rep.warnings.append(f"this clone has no research-log {' and '.join(missing)} "
+                        f"hook{'s' if len(missing) > 1 else ''}, so an amend or a rebase moves no record and no "
+                        f"push is refused. Run once: {cmd} --install-hooks")
 
 
 def _check_commit(rep, root, kind, path, meta, corrected) -> None:

@@ -28,7 +28,10 @@ python3 "$KT/new.py" decision "Use the fast parser" --rests-on "$T"
 python3 "$KT/index.py"
 python3 "$KT/check.py"
 
-python3 "$KT/check.py" | tee /dev/stderr | grep -q "0 errors, 0 warning" \
+# A clone without the hooks is warned, by name of the command, outside CI only.
+env -u CI python3 "$KT/check.py" | grep -q "rebase_runs.py --install-hooks" \
+    || { echo "check.py did not warn about missing hooks" >&2; exit 1; }
+CI=1 python3 "$KT/check.py" | tee /dev/stderr | grep -q "0 errors, 0 warning" \
     || { echo "check.py warned on a fresh board" >&2; exit 1; }
 
 # A document written by an older skill, with run.inputs, passes check.py;
