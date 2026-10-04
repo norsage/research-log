@@ -1,6 +1,6 @@
 # Python with uv
 
-Last checked: 2026-09. Say so when you offer it if that date is old.
+Last checked: 2026-10. Say so when you offer it if that date is old.
 
 For a project whose computation is Python and whose external tools are few.
 Use `conda.md` instead when conda is already the environment manager or the
@@ -17,8 +17,13 @@ is a draft they can change or drop.
 
 ## Stack and environment
 
-Python, version pinned by `requires-python` in `pyproject.toml`. uv installs
-the interpreter, so a machine with no Python reproduces the project.
+Python, its minor version pinned in `.python-version` (`uv python pin
+3.12`), committed; `requires-python` in `pyproject.toml` is the range the
+lockfile is resolved for, not a pin. `uv.lock` pins the packages, not the
+interpreter: without `.python-version` uv takes any installed Python in that
+range, and on a machine with none downloads the newest one allowed, so a
+laptop and a remote job run different Pythons. uv installs the interpreter,
+so a machine with no Python reproduces the project.
 
 Dependencies are added with `uv add <package>`, never by hand-editing
 `pyproject.toml`. `uv.lock` is committed; `uv sync` reconstructs the
