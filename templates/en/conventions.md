@@ -1,5 +1,5 @@
 ---
-template_version: 0.3.0
+template_version: 0.4.0
 ---
 
 # Conventions
@@ -75,7 +75,7 @@ non-English title is refused rather than transliterated.
 | an experiment or a technote is found to be wrong | a **new** document of the same kind with `corrects:`. Never an edit |
 | a definition changes | a new decision superseding the old, never an edit in place |
 | a run used a frozen threshold or slice | name the decision in the experiment's `rests_on` |
-| a run followed a written procedure | name the protocol in the experiment's `under` |
+| a run can be reproduced by a written protocol | name the protocol in the experiment's `under` |
 | a choice was made on a technote or an experiment | name them in the decision's `based_on` |
 | you work out how something installs, runs or is assembled | write a protocol if it will be needed again |
 | the stack, the code layout or a tool version becomes real | one line in `conventions-local.md`, before the code that assumes it |
@@ -92,7 +92,6 @@ non-English title is refused rather than transliterated.
 | A hypothesis in `idea` cites no experiments | `check.py` |
 | Every cited experiment postdates `criterion_set` | `check.py` |
 | Every decision an experiment rests on predates the run | `check.py` |
-| Every protocol an experiment ran `under` was created no later than the run | `check.py` |
 | An `empirical` finding names at least one experiment or technote in `origin` | `check.py` |
 | No hypothesis or experiment cites a technote | `check.py` |
 | Every technote or experiment a decision is `based_on` ran no later than the decision | `check.py` |
@@ -111,3 +110,12 @@ once carried pre-audit labels for eight days with nothing to notice.
 
 Do not restate a number. A number lives in exactly one experiment or technote.
 A finding carries the numbers it rests on; everything else cites.
+
+A protocol's status. `draft`: nobody has yet gone through it end to end, or it
+has steps never executed and not marked as such. `stable`: someone has gone
+through it end to end at least once, the steps match the project as it is now,
+and any step not yet executed is marked in the text. `deprecated`: no longer
+used; write the replacement as a new protocol. A run naming the protocol in
+`under`, or a note in a task, is what shows it was gone through. Whoever
+checked that, person or agent, changes the status and names the evidence in
+the commit message. Steps change with the project; bump `updated` on each edit.

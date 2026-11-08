@@ -10,8 +10,8 @@ updated: 1970-01-01
 
 ## What it produces, and who runs it
 
-One paragraph. An experiment naming this protocol in `under:` is claiming it
-followed what is written here, so say plainly what "followed" covers.
+One paragraph. An experiment naming this protocol in `under:` is reproduced
+by what is written here, so say plainly which part of the run it covers.
 
 ## Before you start
 
@@ -20,7 +20,8 @@ version changes the result.
 
 ## Steps
 
-Numbered. Each one a command or an action with an observable result.
+Numbered. Each one a command or an action with an observable result. Mark
+in the text any step that has never been executed.
 
 ## Traps
 

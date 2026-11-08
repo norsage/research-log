@@ -130,7 +130,7 @@ vision
   │        under   │       ▼
   │                │   decision, dated on or before the run
   │                ▼
-  │            protocol, created on or before the run
+  │            protocol the run is reproduced by
   │
   ╎ motivated_by: free-form string, never parsed
   ▼
@@ -202,9 +202,15 @@ Write a protocol if it will be needed again: a tool's installation with its
 traps, rebuilding the metrics, assembling the report, the measurement a run
 follows.
 
-An experiment names in `under` every protocol its run followed, and `check.py`
-holds each to a creation date on or before the run. `conventions-local.md` holds
-what is true about the project; a protocol holds how to do it.
+An experiment names in `under` every protocol its run is reproduced by.
+`conventions-local.md` holds what is true about the project; a protocol holds
+how to do it.
+
+A protocol is `draft` until someone has gone through it end to end, and
+`stable` after that, with any step never executed marked in the text. A run
+naming it in `under`, or a note in a task, is the evidence; whoever checked it
+changes the status and names the evidence in the commit message. `deprecated`
+means no longer used, and the replacement is a new protocol.
 
 ### The stack, the layout or a tool becomes real
 
@@ -253,8 +259,6 @@ carries the claim. Refutation resolves the same way, with a negative claim.
   Editing the refutation criterion later means raising that date.
 - Every decision an experiment rests on must be dated on or before it. A
   threshold frozen after the numbers exist can be moved until they look better.
-- Every protocol an experiment ran `under` must have been created on or before
-  it. A procedure written up after the result is not what the run followed.
 - `date` on an experiment is the earliest run's date, not the writing date. The
   wrapper writes it.
 - An experiment or a technote is never edited. A mistake found later is a new
@@ -314,7 +318,7 @@ would drift from this one.
 
 Seven scripts in `scripts/`, covering the operations a person must not do by
 hand: setting a board up, upgrading it, allocating an identifier, writing a
-`run:` block, following it across a rewrite of history, and the four checks
+`run:` block, following it across a rewrite of history, and the three checks
 that are methodological rather than clerical.
 
 ```

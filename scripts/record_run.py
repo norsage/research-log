@@ -30,9 +30,9 @@ Three things here are not conveniences:
 
   * **`--rests-on` names the decisions the run used**, and check.py holds each
     of them to a date on or before it. A threshold frozen after the numbers
-    exist can always be moved until they look better. `--under` does the same
-    for the protocols the run followed: a procedure written up after the result
-    is not what the run followed.
+    exist can always be moved until they look better. `--under` names the
+    protocols the run is reproduced by, with no date check: a protocol is often
+    written from the run it describes.
 
 Input files are not hashed. Data outside git is versioned by the project's own
 tool: under DVC or the like, the lock file is in git and `commit:` pins the
@@ -110,7 +110,7 @@ def main() -> int:
                     help="the decisions this run relied on: a threshold, a data "
                          "slice, a definition. Each must predate the run")
     ap.add_argument("--under", nargs="*", default=[], metavar="ID",
-                    help="the protocols this run followed. Each must predate it")
+                    help="the protocols this run is reproduced by")
     ap.add_argument("--date", metavar="YYYY-MM-DD",
                     help="the earliest run's date. Default: today")
     ap.add_argument("--commit", metavar="SHA",

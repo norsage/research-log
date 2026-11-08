@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check the research log. Exit 1 if anything is broken.
 
-Four of these checks are methodological rather than clerical, and they are the
+Three of these checks are methodological rather than clerical, and they are the
 reason this script exists at all:
 
   * **A hypothesis in `idea` may not cite experiments.** An idea with runs
@@ -20,10 +20,8 @@ reason this script exists at all:
     a refutation criterion is a hypothesis' pre-commitment, and a decision is
     the definition a run was computed under.
 
-  * **Every protocol an experiment ran under existed on or before it.** An
-    experiment naming a protocol claims it followed what that file says; a
-    protocol written after the run is a procedure reconstructed from the
-    result.
+A protocol named in `under` has no date check: it is the instruction the run
+is reproduced by, and it is often written from the run itself.
 
 A record's commit must still be there. `run.commit`, and `origin.commit` of a
 finding minted here, is an ancestor of HEAD or held by the record's tag: a
@@ -360,16 +358,10 @@ def _check_run(rep, path, meta, by_id, resolves, doc_kind) -> None:
         if not resolves(ref):
             rep.error(path, f"under names {ref}, which does not resolve")
             continue
-        kind, _, proto_meta = by_id[str(ref)]
+        kind = by_id[str(ref)][0]
         if kind != "protocol":
             rep.error(path, f"under names {ref}, which is a {kind}. It names the "
-                            "protocols a run followed")
-            continue
-        written = as_date(proto_meta.get("created"))
-        if ran and written and written > ran:
-            rep.error(path, f"ran under {ref}, created {written}, after this ran "
-                            f"{ran} - a procedure written after the result is not "
-                            "what the run followed")
+                            "protocols a run is reproduced by")
 
 
 def _check_decision(rep, path, meta, by_id, resolves) -> None:

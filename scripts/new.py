@@ -111,7 +111,7 @@ def main() -> int:
                          "an experiment's decisions, a decision's technotes and "
                          "experiments")
     ap.add_argument("--under", nargs="*", metavar="ID",
-                    help="experiment, technote: the protocols this run followed")
+                    help="experiment, technote: the protocols this run is reproduced by")
     ap.add_argument("--class", dest="klass", choices=FINDING_CLASSES,
                     help="finding: what admits the claim. Default: empirical")
     ap.add_argument("--motivated-by", metavar="REF",
