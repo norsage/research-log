@@ -174,7 +174,8 @@ that field. `record_run.py` was writing the machine half of provenance —
 The check follows the shape of the two that existed: a protocol named in
 `under` must have been created on or before the run. A procedure written up
 after the result is not what the run followed, for the same reason a threshold
-frozen after the numbers is not a pre-commitment.
+frozen after the numbers is not a pre-commitment. **Reversed by §1.9,
+2026-11-08:** `under` keeps no date check.
 
 **Why classes rather than more kinds.** A theorem proved here, a reading of
 what the field has and has not done, a comparison argued from the methods'
@@ -267,6 +268,62 @@ drafts, reviews and plans.
 
 Rejected: a `machine` field in `run:`. When a technote's numbers depend on the
 hardware, its text says what the hardware was.
+
+### 1.9 A protocol is an instruction, and may be written after its run
+
+Decided 2026-11-08, reversing the date check of §1.7. A protocol named in
+`under` may be created after the run. `under` now reads "this run is
+reproduced by", and the protocol's `status` says whether anyone has gone
+through it.
+
+**What §1.7 got wrong.** It treated a protocol like a decision: something
+fixed in advance that a run is then held to. A decision is a pre-commitment,
+because a threshold set after the numbers can be moved until they look
+better. A protocol has no such lever over the result. It is an instruction
+for repeating a procedure, and the usual way one gets written is that someone
+works the procedure out on a real run and then writes down the route that
+worked. The conventions said exactly that ("you work out how something
+installs, runs or is assembled → write a protocol"), and the date check
+punished it.
+
+**What it cost.** binding-ddg ran fourteen ΔΔG methods on its external set in
+one experiment, E-0016.iew. Seven protocols were written the same day as the
+earliest run and passed. The ProMIM protocol, P-0006.84t, was written the next
+day, so `check.py` refused it, and the experiment carries a sentence
+explaining why the one protocol it was reproduced by is missing from `under`.
+The record lost a link it had, and gained nothing in exchange: the run was not
+more honest for leaving out the protocol.
+
+**What holds a protocol honest instead.** Whether its text matches what
+works, which a date cannot tell. binding-affinity had already written that
+down locally (2026-10-28, commit a0b1f03 there): `draft` until someone goes
+through the protocol end to end, `stable` after that with untried steps
+marked in the text, and the evidence is a run naming it in `under` or a note
+in a task. The rule moved into the shipped conventions unchanged in
+substance. The skill had named the three values since §1.7 and never said
+what they meant; `check.py` still checks only the vocabulary.
+
+`under` stays an optional link with no ordering rule. A protocol usually
+lives apart from any one experiment; when one exists by the time the run is
+recorded, naming it costs nothing and later serves as evidence for `stable`.
+That evidence was the field's one real use so far: binding-affinity moved
+P-0002.wgp to `stable` on five records naming it, while its other two
+protocols had to be confirmed by hand from tasks and commits.
+
+Rejected: dropping `under`. It would take away the one use above and break
+some fifty existing references across three projects for no gain.
+
+Rejected: keeping the check as a warning. A warning on the normal case
+trains people to ignore warnings.
+
+Rejected: a protocol field listing the runs that went through it. It would
+duplicate `under` in the other direction and go stale; a search for the id
+over `experiments/`, `technotes/` and the tracker answers the same question.
+
+Rejected: pinning the protocol's version per run. A protocol is edited as the
+project changes, and git already dates every version; a run older than the
+current text is reproduced from the protocol as it stood in `git log` after
+that run.
 
 ## 2. What enforces it: checks, fields, identifiers, language
 

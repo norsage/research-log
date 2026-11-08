@@ -4,7 +4,7 @@ title: TITLE
 # motivated_by: "0042.k3f"   # free-form; a task id in whatever tracker. Never parsed
 # corrects: <id>             # only when this supersedes an earlier experiment
 # rests_on: [D-0003.m4k]     # decisions this run relied on. Each must predate it
-# under: [P-0001.k3f]        # protocols this run followed. Each must predate it
+# under: [P-0001.k3f]        # protocols this run is reproduced by
 
 # --- written by the run wrapper ---
 id: E-0000.xxx
