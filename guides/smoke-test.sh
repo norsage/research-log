@@ -160,6 +160,24 @@ if git rev-parse -q --verify "refs/tags/research-log/$E4" >/dev/null; then
 fi
 python3 "$KT/check.py" | grep -q "0 errors, 0 warning" \
     || { echo "check.py still reports a corrected record" >&2; exit 1; }
+
+# Merging a branch with records in, through a conflict: before the merge commit
+# exists, its records' commits are ancestors of MERGE_HEAD only, and the
+# pre-commit check must let that commit be made.
+git checkout -q -b side main
+echo side >> README.md && git commit -qam "side readme"
+E6=$(python3 "$KT/record_run.py" "Run on a side branch" | head -1)
+git add -A && git commit -qm "record $E6"
+git checkout -q feat && echo feat >> README.md && git commit -qam "feat readme"
+if git merge -q side >/dev/null 2>&1; then
+    echo "the merge was meant to stop on a conflict" >&2; exit 1
+fi
+git checkout -q --theirs README.md && git add README.md
+python3 "$KT/check.py" --quiet >/dev/null \
+    || { echo "check.py refused a merge in progress bringing in a record" >&2; exit 1; }
+git commit -qm "merge side"
+python3 "$KT/check.py" --quiet >/dev/null \
+    || { echo "check.py refused a record brought in by a merge" >&2; exit 1; }
 cd "$WORK"
 
 # Neither init.py nor upgrade.py touches the project's AGENTS.md, and

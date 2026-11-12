@@ -563,6 +563,17 @@ Not taken, for now: reading `dvc.lock` to supply `run_paths`. A stage's `deps`
 are exactly the list wanted, but keeping two copies of it in step is a job
 nobody has needed yet.
 
+Merging main into a branch, the path a project takes once the branch has
+records, put the check in a loop. The pre-commit hook runs before the merge
+commit exists, so the records main brings in name commits that are not yet
+ancestors of HEAD, and the check refused the very commit that would make them
+so. binding-ddg met it on 2026-11-12, with eleven records from a merged pull
+request. While a merge is in progress, an ancestor of MERGE_HEAD now counts as
+on HEAD: every MERGE_HEAD becomes a parent of the commit being made, and once
+the merge is aborted MERGE_HEAD is gone and the check is as strict as before.
+Not taken: skipping the hook for merge commits, which would also let through a
+merge whose own branch carries a record left behind.
+
 ## 3. The files a project gets
 
 ### 3.1 The watershed: who owns a document's shape

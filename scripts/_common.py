@@ -691,6 +691,16 @@ def keep_tag(kind: str, doc_id: str) -> str:
     return f"refs/tags/{TAG_PREFIX}{doc_id}"
 
 
+def merge_heads(root: Path) -> list[str]:
+    """The commits a merge in progress brings in: one per line of MERGE_HEAD.
+
+    `rev-parse MERGE_HEAD` gives only the first of an octopus merge, so the
+    file is read. The file exists only while a merge is in progress.
+    """
+    path = root / git(root, "rev-parse", "--git-path", "MERGE_HEAD")[1]
+    return path.read_text().split() if path.is_file() else []
+
+
 def commit_state(root: Path, tag: str, commit: str) -> str:
     """Where a record's commit stands against HEAD.
 
@@ -700,6 +710,11 @@ def commit_state(root: Path, tag: str, commit: str) -> str:
     nothing; rebase_runs.py's to follow. `missing`: not in this repository at
     all - collected after a rewrite, or never fetched. `unknown`: no git, no
     HEAD, or a shallow clone, where the question cannot be answered.
+
+    While a merge is being concluded, the commit being made will have every
+    MERGE_HEAD as a parent, so an ancestor of one is `ok` too. Without this the
+    pre-commit check refuses the merge commit that brings in another branch's
+    records, before that commit exists to make their commits ancestors.
     """
     code, head = git(root, "rev-parse", "--verify", "-q", "HEAD")
     if code != 0 or not head:
@@ -709,8 +724,9 @@ def commit_state(root: Path, tag: str, commit: str) -> str:
     code, full = git(root, "rev-parse", "--verify", "-q", f"{commit}^{{commit}}")
     if code != 0:
         return "missing"
-    if git(root, "merge-base", "--is-ancestor", full, head)[0] == 0:
-        return "ok"
+    for tip in [head, *merge_heads(root)]:
+        if git(root, "merge-base", "--is-ancestor", full, tip)[0] == 0:
+            return "ok"
     code, tagged = git(root, "rev-parse", "--verify", "-q", f"{tag}^{{commit}}")
     if code == 0 and tagged == full:
         return "tagged"
