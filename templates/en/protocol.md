@@ -23,6 +23,14 @@ version changes the result.
 Numbered. Each one a command or an action with an observable result. Mark
 in the text any step that has never been executed.
 
+Refine instructions, explanations and limitations directly before first
+acceptance into the main integration branch, including during review; the
+protocol stays mutable afterwards. Distinguish future improvements from the
+procedure already used. Never claim past runs used a changed procedure;
+correcting the account of steps actually performed needs reliable evidence.
+Retain past procedures in git history and distinguish them in the text;
+update `updated` on edits. Replace a deprecated protocol with a new one.
+
 ## Traps
 
 What breaks, and the route that works. A trap worked out once and left

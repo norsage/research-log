@@ -61,14 +61,14 @@ does not enter into it.
 
 ## The six kinds
 
-| Kind | Written | Mutable | Leaves the project |
-|---|---|---|---|
-| hypothesis | before the evidence | yes | no |
-| experiment | after a run over the project's subject | never | no |
-| technote | after a run over the project's tooling | never | no |
-| finding | once the claim holds | yes | yes, the only one |
-| protocol | when a procedure will be repeated | yes | no |
-| decision | when a choice is frozen | no; superseded instead | no |
+| Kind | Written | Text before first acceptance | Text after acceptance | Leaves the project |
+|---|---|---|---|---|
+| hypothesis | before the evidence | editable; protect pre-registration | mutable; protect pre-registration | no |
+| experiment | after a run over the project's subject | editable report of the actual run | immutable; errors need a new experiment with `corrects` | no |
+| technote | after a run over the project's tooling | editable report of the actual check | immutable; errors need a new technote with `corrects` | no |
+| finding | once the claim holds | editable claim and grounds | mutable under finding rules | yes, the only one |
+| protocol | when a procedure will be repeated | editable; preserve procedures already used | mutable; preserve procedures already used | no |
+| decision | when a choice is frozen | editable; preserve conditions already used | not rewritten; superseded by a new decision | no |
 
 An experiment and a technote are the same record over a run. They differ in
 what the run examined. An experiment's result says something about the subject
@@ -100,6 +100,69 @@ prose their template asks for. A benchmark run in this project is `empirical`,
 whether an experiment or a technote records it; a comparison argued from
 complexity is `analytical`. The class follows what established the claim,
 never its subject.
+
+## Editing text: two independent boundaries
+
+Before a document's **first acceptance into the project's main integration
+branch**, the text of all six kinds may be edited directly, including in
+response to review. Keep its `id`; a new experiment or technote needs no
+separate `corrects` just to fix its text, report of a result or interpretation.
+This is an editorial boundary, not permission to rewrite research history.
+`main` is an example branch name, not a required name.
+
+Acceptance concerns the particular record, identified by its stable `id`, not
+its first commit, push, open MR/PR, removal of Draft or reviewer approval.
+An open MR, a new branch, copying or renaming a file or changing its slug does
+not make a previously accepted record new. Its history and mutability rules
+follow it. Status values such as `draft`, `accepted` and `active` do not tell
+whether a document has entered the main integration branch.
+
+The other boundary is **use of conditions in research**, which may precede
+acceptance. Editorial permission never allows retrospective changes to
+definitions, criteria, budgets or procedures already used, or false accounts
+of actual runs. This applies to meaning in the text even if every frontmatter
+field is unchanged:
+
+- **Experiment:** refine the account of the run, correct transcription or
+  interpretation of results, and add limitations and conclusions during review.
+  Do not substitute another run, hide failed attempts or pass new computations
+  off as old ones; the numbers' provenance and the code used remain truthful.
+  After acceptance, fix errors with a new experiment carrying `corrects: <id>`.
+- **Technote:** refine the account of the tool check, results and conclusions
+  during review, without substituting the tool/version, measurement conditions
+  or result source. After acceptance, fix errors with a new technote carrying
+  `corrects: <id>`.
+- **Finding:** refine the claim, grounds, scope, limitations and recommendation.
+  Never attribute unobserved results to its sources or distort primary
+  experiments; distinguish a new interpretation from what was measured. It
+  stays mutable after acceptance; `corrects` is not required for every refinement.
+- **Hypothesis:** refine the question, motivation and wording; agree the
+  criterion before evidence relevant to its test appears. Once testing starts,
+  do not replace the original claim or criterion to fit results and present it
+  as pre-registered, even by editing only prose. It stays mutable after
+  acceptance, subject to `criterion_set`, statuses and experiment links.
+  A substantive revision must preserve the old test and its conditions, not
+  relabel its evidence as a test of the new criterion; use the existing
+  `criterion_set` rules, or `recycled`/`successor` for a new question.
+- **Protocol:** improve instructions, explain steps and limitations, and
+  distinguish future improvements from the procedure already used. Correct an
+  account of steps actually performed only on reliable evidence; never claim
+  that past runs used a changed procedure. It stays mutable after acceptance:
+  retain past procedures in git history and distinguish them in the text.
+  A deprecated protocol's replacement is a new protocol, as before.
+- **Decision:** refine wording and rationale; agree its substance before use.
+  Once used in a run, do not retrospectively change thresholds, slices, budgets
+  or selection algorithms, even before acceptance. Meaning-preserving wording
+  changes remain allowed before acceptance; changed conditions require a new
+  decision. After acceptance, do not rewrite the text: replace it with a new
+  decision, marking the old `superseded` with `superseded_by`, not automatically
+  with `corrects`.
+
+This permission concerns text, not arbitrary edits to `id`, `run.commit`, run
+dates, run identifiers or provenance. Decision, protocol and criterion dates
+must remain truthful; no retrospective pre-registration. Keep the existing
+run-recording and post-rebase link migration mechanisms below. New computations
+are not text edits and still need accounting under those rules.
 
 ## Frontmatter
 
@@ -256,14 +319,18 @@ carries the claim. Refutation resolves the same way, with a negative claim.
 ## Behavioural rules
 
 - Every experiment a hypothesis cites must be dated after its `criterion_set`.
-  Editing the refutation criterion later means raising that date.
+  A substantive change to the refutation criterion means raising that date;
+  meaning-preserving wording does not. Preserve the original conditions and
+  evidence; neither raising the date nor leaving it unchanged makes a revised
+  criterion pre-registered for results already seen, even before acceptance.
 - Every decision an experiment rests on must be dated on or before it. A
   threshold frozen after the numbers exist can be moved until they look better.
 - `date` on an experiment is the earliest run's date, not the writing date. The
   wrapper writes it.
-- An experiment or a technote is never edited. A mistake found later is a new
-  document of the same kind carrying `corrects: <id>`, which also drives the
-  blast-radius walk.
+- After first acceptance into the main integration branch, an experiment or
+  technote's text is not edited. A mistake is a new document of the same kind
+  carrying `corrects: <id>`, which also drives the blast-radius walk. Before
+  acceptance, apply the text-editing rules above without changing the record's id.
 - A number someone will compare belongs in an experiment or a technote, not in
   a task. The task keeps a reference.
 - No hypothesis or experiment cites a technote: what tests a hypothesis is an
@@ -371,8 +438,10 @@ change, and records the old SHA and the reason in `rebased` beside it;
 `run_paths` in the board config, that list is the default, and the hook moves
 every record it clears without being asked. `--keep` tags the old commit
 instead, for when the code did change. The third way out is a new run with
-`corrects:`. `rebase_runs.py --install-hooks` once per clone adds the
-post-rewrite hook and a pre-push hook that refuses a push leaving a record
+`corrects:`. These rerun rules still apply before first acceptance: a new
+computation is not an editorial fix to the old report.
+`rebase_runs.py --install-hooks` once per clone adds the post-rewrite hook and
+a pre-push hook that refuses a push leaving a record
 behind. Git does not copy hooks, so `check.py` warns in a clone that lacks
 either one, naming the command, except where `CI` is set. What the hosting has to be set to, so that it does not rewrite a
 branch unseen, is [`references/git-hosting.md`](references/git-hosting.md).

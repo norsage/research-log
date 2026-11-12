@@ -1,5 +1,5 @@
 ---
-template_version: 0.4.0
+template_version: 0.5.0
 ---
 
 # Conventions
@@ -52,6 +52,45 @@ The title and the body are in the project's language. The filename is always
 English: pass `--slug` with three or four English words. Without one, a
 non-English title is refused rather than transliterated.
 
+## Editing text: acceptance and use
+
+Before a document's **first acceptance into the main integration branch**,
+the text of all six kinds may be edited directly, including during review.
+Keep its `id`. This concerns text, not arbitrary edits to service fields:
+`id`, `run.commit`, run dates, run identifiers and data provenance remain
+truthful and follow the existing recording and rebase mechanisms.
+
+The main integration branch is the project's primary integration branch;
+`main` is only an example name. First acceptance concerns the specific record,
+identified by its stable `id`, not its first commit, push, MR/PR, removal of
+Draft or reviewer approval. An open MR, a new branch, copying or renaming a
+file or changing its slug does not reset a previously accepted record's
+history or rules. Statuses (`draft`, `accepted`, `active`, etc.) do not mean
+presence in that branch.
+
+**Use of conditions in research is a separate boundary**, possibly before
+acceptance. Do not retrospectively change definitions, criteria, budgets or
+procedures already used, or distort actual runs. Changing only text can violate
+this rule even with all service fields unchanged. Decision, protocol and
+criterion dates must remain truthful: no retrospective pre-registration.
+
+| Kind | Text before first acceptance | Boundary that text edits cannot bypass | After acceptance |
+|---|---|---|---|
+| experiment | refine the run description, correct transcription or interpretation, add limitations and conclusions; no separate `corrects` just for these review edits | do not substitute runs, hide failed attempts or pass new computations off as old ones; preserve numbers' provenance and code used | errors require a new experiment with `corrects: <id>`, not an edit to the accepted text |
+| technote | refine the tool check's description, results and conclusions; no separate `corrects` just for these review edits | do not substitute the tool/version, measurement conditions or result source | errors require a new technote with `corrects: <id>` |
+| finding | refine the claim, grounds, scope, limitations and recommendation | do not invent results in its sources or distort primary experiments; separate new interpretation from measured evidence | stays mutable under finding rules; no mandatory `corrects` for every refinement |
+| hypothesis | refine question, motivation and wording; agree the criterion before evidence relevant to its test | once testing starts, do not replace the original claim or criterion to fit seen results and present it as pre-registered, even in prose alone | stays mutable, subject to pre-registration, `criterion_set`, statuses and experiment links |
+| protocol | improve instructions, explain steps and limitations; distinguish future improvements from procedures already used | do not claim past runs used a changed procedure; correcting the account of steps actually performed needs reliable evidence | stays mutable; retain past procedures in git history and distinguish them in the text; a deprecated protocol's replacement is a new protocol |
+| decision | refine wording and rationale; agree substance before use | once used in a run, do not retrospectively change thresholds, slices, budgets or selection algorithms; meaning-preserving wording is allowed before acceptance, changed conditions need a new decision | do not rewrite accepted text; replace with a new decision using `superseded` and `superseded_by`, not automatically `corrects` |
+
+A substantive change to a hypothesis criterion requires raising `criterion_set`;
+a wording clarification that preserves meaning does not. Preserve the original
+conditions and evidence: neither changing that date nor leaving it untouched
+makes the new criterion pre-registered for results already seen. A new question
+uses `recycled`/`successor`. For hypotheses, protocols and decisions already
+used, use these existing mechanisms for substantive revisions, preserving the
+conditions of past runs. Permission to clarify is not permission to replace meaning.
+
 ## The moments that fire a rule
 
 | Moment | Rule |
@@ -72,13 +111,17 @@ non-English title is refused rather than transliterated.
 | a hypothesis resolves | write the finding, set `status: resolved` and `finding:`. Refutation produces a finding too |
 | the question turns out wrong | `status: recycled`, `successor:` |
 | a number in a task appears | move it to an experiment or a technote, leave a reference behind |
-| an experiment or a technote is found to be wrong | a **new** document of the same kind with `corrects:`. Never an edit |
-| a definition changes | a new decision superseding the old, never an edit in place |
+| an experiment or a technote is found to be wrong | before its first acceptance, correct its text directly under the rules above, keeping its `id`; after acceptance, a **new** document of the same kind with `corrects: <id>`, never an edit to the accepted text |
+| a definition changes | if the decision is already used or accepted into the main integration branch, a new decision superseding the old; before both boundaries, agree its content directly. A meaning-preserving clarification is not a changed definition, but an applied definition cannot be rewritten under cover of a draft edit |
 | a run used a frozen threshold or slice | name the decision in the experiment's `rests_on` |
 | a run can be reproduced by a written protocol | name the protocol in the experiment's `under` |
 | a choice was made on a technote or an experiment | name them in the decision's `based_on` |
 | you work out how something installs, runs or is assembled | write a protocol if it will be needed again |
 | the stack, the code layout or a tool version becomes real | one line in `conventions-local.md`, before the code that assumes it |
+
+Text-editing permission does not change the rerun and history-rewrite rules
+above, even before first acceptance. New computations are not editorial fixes;
+record them under those rules rather than substitute their numbers for old ones.
 
 ## Rules with a mechanism
 
