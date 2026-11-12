@@ -19,6 +19,12 @@ origin:
 
 One paragraph. A statement that could be wrong.
 
+Refine the claim, grounds, scope, limitations and recommendation directly before
+first acceptance into the main integration branch, including during review.
+It stays mutable after acceptance; `corrects` is not required for every
+refinement. Do not invent results in its sources or distort primary experiments;
+separate new interpretation from what was measured.
+
 ## Conditions and limits
 
 Where it holds: the data slice, the classes, the tools with their versions,

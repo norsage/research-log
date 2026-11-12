@@ -5,6 +5,8 @@
 #
 #   bash guides/smoke-test.sh
 #
+# Manual text-editing policy scenarios: guides/review-editing-checks.md.
+#
 # A development document: install.sh does not copy guides/.
 
 set -euo pipefail
@@ -162,34 +164,61 @@ python3 "$KT/check.py" | grep -q "0 errors, 0 warning" \
     || { echo "check.py still reports a corrected record" >&2; exit 1; }
 cd "$WORK"
 
-# Neither init.py nor upgrade.py touches the project's AGENTS.md, and
-# upgrade.py brings an older conventions.md up to date.
+# Neither init.py nor upgrade.py touches the project's AGENTS.md. In both
+# languages, upgrading conventions preserves local rules and all six kinds.
 SKILL="$(dirname "$KT")"
-mkdir "$WORK/up" && cd "$WORK/up"
-git init -q .
-git config user.email smoke@test
-git config user.name "Smoke Test"
-printf '# Проект\n\n## Вопрос\n\nЧто выяснить.\n' > brief.md
-printf '# Existing\n\nprojects own line\n' > AGENTS.md
-cp AGENTS.md AGENTS.before
-python3 "$KT/init.py" --lang ru --yes >/dev/null 2>&1
-cmp -s AGENTS.md AGENTS.before \
-    || { echo "init.py touched AGENTS.md" >&2; exit 1; }
-git add -A && git commit -qm init
-python3 "$KT/upgrade.py" --check >/dev/null
+for lang in en ru; do
+    mkdir "$WORK/up-$lang" && cd "$WORK/up-$lang"
+    git init -q .
+    git config user.email smoke@test
+    git config user.name "Smoke Test"
+    printf '# Project\n\n## Question\n\nWhat to learn.\n\n## Вопрос\n\nЧто выяснить.\n' > brief.md
+    printf '# Existing\n\nprojects own line\n' > AGENTS.md
+    cp AGENTS.md AGENTS.before
+    python3 "$KT/init.py" --lang "$lang" --yes >/dev/null 2>&1
+    cmp -s AGENTS.md AGENTS.before \
+        || { echo "init.py touched AGENTS.md ($lang)" >&2; exit 1; }
+    printf '\nProject-owned rule: retain this line.\n' >> docs/conventions-local.md
+    git add -A && git commit -qm init
+    python3 "$KT/new.py" hypothesis "A review question" >/dev/null
+    python3 "$KT/new.py" protocol "A review procedure" >/dev/null
+    python3 "$KT/new.py" decision "A review choice" >/dev/null
+    python3 "$KT/new.py" finding "A review argument" --class analytical >/dev/null
+    python3 "$KT/record_run.py" "A review measurement" >/dev/null
+    python3 "$KT/record_run.py" "A review tool check" --kind technote >/dev/null
+    python3 "$KT/index.py" >/dev/null
+    CI=1 python3 "$KT/check.py" --quiet >/dev/null
+    git add -A && git commit -qm "all six kinds"
+    python3 "$KT/upgrade.py" --check >/dev/null
+    cp -R docs "$OLD/board-$lang"
 
-sed -i.bak -e 's/^template_version: .*/template_version: 0.1.0/' docs/conventions.md
-rm docs/conventions.md.bak
-git commit -qam "pretend 0.1.0"
-python3 "$KT/check.py" | grep -q "Run upgrade.py" \
-    || { echo "check.py did not warn about old conventions" >&2; exit 1; }
-if python3 "$KT/upgrade.py" --check >/dev/null; then
-    echo "upgrade.py --check passed an out-of-date board" >&2; exit 1
-fi
-python3 "$KT/upgrade.py" >/dev/null
-cmp -s docs/conventions.md "$SKILL/templates/ru/conventions.md" \
-    || { echo "upgrade.py did not replace conventions.md" >&2; exit 1; }
-cmp -s AGENTS.md AGENTS.before \
-    || { echo "upgrade.py touched AGENTS.md" >&2; exit 1; }
+    sed -i.bak -e 's/^template_version: .*/template_version: 0.4.0/' docs/conventions.md
+    rm docs/conventions.md.bak
+    git commit -qam "pretend 0.4.0"
+    python3 "$KT/check.py" | grep -q "Run upgrade.py" \
+        || { echo "check.py did not warn about old conventions ($lang)" >&2; exit 1; }
+    if python3 "$KT/upgrade.py" --check >/dev/null; then
+        echo "upgrade.py --check passed an out-of-date board ($lang)" >&2; exit 1
+    fi
+    git diff --exit-code  # --check must not write anything
+    python3 "$KT/upgrade.py" >/dev/null
+    cmp -s docs/conventions.md "$SKILL/templates/$lang/conventions.md" \
+        || { echo "upgrade.py did not replace conventions.md ($lang)" >&2; exit 1; }
+    cmp -s AGENTS.md AGENTS.before \
+        || { echo "upgrade.py touched AGENTS.md ($lang)" >&2; exit 1; }
+    python3 - "$OLD/board-$lang" <<'PY'
+import sys
+from pathlib import Path
+
+before, after = Path(sys.argv[1]), Path("docs")
+old = {p.relative_to(before): p.read_bytes() for p in before.rglob("*") if p.is_file()}
+new = {p.relative_to(after): p.read_bytes() for p in after.rglob("*") if p.is_file()}
+old.pop(Path("conventions.md"))
+new.pop(Path("conventions.md"))
+assert old == new, "upgrade.py changed board files other than conventions.md"
+PY
+    python3 "$KT/upgrade.py" --check >/dev/null
+    CI=1 python3 "$KT/check.py" --quiet >/dev/null
+done
 
 echo "smoke test passed in $WORK"
