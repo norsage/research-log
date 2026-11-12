@@ -18,13 +18,26 @@ What we are asking, why it might be true, what the expectation rests on.
 Links, sketches and back-of-envelope estimates, with as much room as they need.
 This section is what makes an idea worth keeping before anyone commits to it.
 
+Before first acceptance into the main integration branch, refine the question,
+motivation and wording directly, including during review. The hypothesis stays
+mutable after acceptance, subject to pre-registration, statuses and experiment
+links. The criterion is fixed for a test when testing starts, not when the
+document enters the main integration branch.
+
 ## What would refute it
 
 Filled in when the status moves to `active`, before the first run.
 
-An observable result, after which the hypothesis is held to be refuted. Editing
-it once experiments exist means raising `criterion_set`, which is what makes
-the edit visible.
+An observable result, after which the hypothesis is held to be refuted. Agree
+it before evidence relevant to the test appears. Once testing starts, do not
+replace the original claim or criterion to fit seen results and present it as
+pre-registered, even before acceptance and even by editing only text.
+
+A substantive criterion change means raising `criterion_set`; a
+meaning-preserving wording change does not. Preserve the original conditions
+and evidence: neither changing the date nor leaving it untouched pre-registers
+a new criterion for old results. A new question uses `recycled`/`successor`;
+follow the existing rules in `conventions.md`, not retrospective relabelling.
 
 ## What the experiments showed
 

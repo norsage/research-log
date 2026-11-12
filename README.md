@@ -47,6 +47,13 @@ Anything that is not one of those six is how the work went, and belongs in
 your tracker, whichever one you use. Dates are checked: an experiment cannot
 cite a criterion or a decision younger than itself.
 
+All six kinds allow direct text edits before the record first enters the
+project's main integration branch, including during review. That does not
+allow retrospective changes to conditions already used in research or to run
+provenance. Afterwards, experiments and technotes need correction records,
+decisions are superseded, and findings, hypotheses and protocols stay mutable
+under their own rules. See [the two boundaries in SKILL.md](SKILL.md#editing-text-two-independent-boundaries).
+
 ## Customising
 
 Templates ship in English and Russian; keys and enum values are identical in
