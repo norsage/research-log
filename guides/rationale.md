@@ -28,10 +28,9 @@ Three arguments say they are the reality:
   hypothesis, an exploratory run gets one written after the result is visible,
   and that result then confirms it by construction. The discipline looks
   intact and every record becomes untrustworthy.
-- After first acceptance into the main integration branch, an experiment's
-  text is immutable and self-contained; a hypothesis is living. Making
-  the record a child of the living document is the same bug as a living
-  contract file absorbing its own history.
+- An experiment is a self-contained record of a run; a hypothesis is living.
+  Making the record a child of the living document is the same bug as a
+  living contract file absorbing its own history.
 
 Once the relation is citation rather than subordination, M:M is the normal
 case: one expensive pass over the data answers three questions.
@@ -338,11 +337,6 @@ refutation criterion was written before the evidence. Reduced to a mechanism,
 that is a date comparison. Editing the criterion later means raising that date,
 which turns an invisible edit into a visible one.
 
-A meaning-preserving wording clarification does not change that date. A changed
-criterion must not overwrite the conditions of past tests or present seen
-results as a pre-registered test of the new criterion, even while the document
-is still on review. The date check is a guard, not permission to relabel evidence.
-
 Two consequences that look like details and are not:
 
 - `date:` on an experiment is the earliest run's date, not the writing date.
@@ -379,14 +373,12 @@ and two things fixed it:
   error change the claim". This also makes a finding readable when it travels
   alone as a single file.
 
-`corrects:` on a new document drives the walk, because an experiment's text is
-not edited after first acceptance into the main integration branch and so
-never raises a review flag by being edited then. Before first acceptance,
-review may refine the same record's text with its id preserved. This editorial
-boundary is independent of the use of research conditions: even a record still
-on review cannot retrospectively change applied criteria, budgets or procedures,
-or pass new computations off as a wording fix. The same acceptance boundary
-applies to technotes; it does not freeze the mutable kinds.
+`corrects:` on a new document drives the walk. Once an experiment or
+technote is on the main branch, other records may already rely on it; a
+separate correction preserves what they originally relied on and makes it
+possible to find what needs revisiting. Before the merge, requiring a separate
+record just to address review feedback would clutter the log and leave the
+reviewed text split across records.
 
 ### 2.4 Language: prose yes, keys never
 
