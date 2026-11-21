@@ -5,8 +5,6 @@
 #
 #   bash guides/smoke-test.sh
 #
-# Manual text-editing policy scenarios: guides/review-editing-checks.md.
-#
 # A development document: install.sh does not copy guides/.
 
 set -euo pipefail
